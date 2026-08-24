@@ -39,6 +39,28 @@
     return [];
   }
 
+  // ---- community codes (Supabase, via the background worker) ----------
+  // The background worker does the network calls so a store page's CSP
+  // can't block them. Everything here fails soft: if the cloud is down,
+  // Clover just uses its built-in codes.
+
+  function cloudSend(msg) {
+    return new Promise((resolve) => {
+      try {
+        chrome.runtime.sendMessage(msg, (r) => resolve(r || { ok: false }));
+      } catch (e) { resolve({ ok: false }); }
+    });
+  }
+
+  async function cloudCodesForStore() {
+    const r = await cloudSend({ type: "clover_codes" });
+    if (!r || !r.ok || !Array.isArray(r.data)) return [];
+    return r.data.filter((row) => {
+      const s = String(row.store || "").toLowerCase().replace(/^www\./, "");
+      return s && (host.includes(s) || s.includes(host));
+    });
+  }
+
   // ---- badge ----------------------------------------------------------
 
   const badge = document.createElement("div");
@@ -336,7 +358,6 @@
   async function runCodes() {
     const recipe = pickRecipe();
     const box = findCodeBox(recipe);
-    const codes = codesForStore();
 
     if (!box) {
       say("Cannot find the promo box", { kind: "miss", hold: 3000 });
@@ -346,7 +367,22 @@
       return;
     }
 
-    if (codes.length === 0) {
+    // Merge built-in codes with community codes from Supabase.
+    const list = [];
+    const seen = new Set();
+    codesForStore().forEach((c) => {
+      if (c && !seen.has(c)) { seen.add(c); list.push({ code: c, id: null }); }
+    });
+    let cloud = [];
+    try { cloud = await cloudCodesForStore(); } catch (e) { cloud = []; }
+    cloud.forEach((row) => {
+      if (row.code && !seen.has(row.code)) {
+        seen.add(row.code);
+        list.push({ code: row.code, id: row.id });
+      }
+    });
+
+    if (list.length === 0) {
       say("No codes saved for this store", { kind: "miss", hold: 3000 });
       body.innerHTML = `
         <p class="clover-line">No codes saved for this store yet.</p>
@@ -355,7 +391,7 @@
     }
 
     setMood("looking");
-    say("Trying " + codes.length + " codes");
+    say("Trying " + list.length + " codes");
     body.innerHTML = `
       <div class="clover-spinner"><span></span><span></span><span></span><span></span></div>
       <p class="clover-line clover-status">Trying codes...</p>
@@ -367,13 +403,13 @@
     const startTotal = readTotal(recipe);
     let best = null;
 
-    for (let i = 0; i < codes.length; i++) {
-      const code = codes[i];
-      currentEl.textContent = `${code}  (${i + 1} of ${codes.length})`;
-      say(code, { kind: "code" });
+    for (let i = 0; i < list.length; i++) {
+      const item = list[i];
+      currentEl.textContent = `${item.code}  (${i + 1} of ${list.length})`;
+      say(item.code, { kind: "code" });
 
       box.focus();
-      box.value = code;
+      box.value = item.code;
       box.dispatchEvent(new Event("input", { bubbles: true }));
       box.dispatchEvent(new Event("change", { bubbles: true }));
 
@@ -385,7 +421,7 @@
       const now = readTotal(recipe);
       if (startTotal && now && now < startTotal) {
         const saved = startTotal - now;
-        if (!best || saved > best.saved) best = { code, saved };
+        if (!best || saved > best.saved) best = { code: item.code, id: item.id, saved };
       }
     }
 
@@ -397,13 +433,15 @@
         <p class="clover-line clover-win">Saved ${best.saved.toFixed(2)}</p>
         <p class="clover-sub">Best code was <code>${best.code}</code>. It is applied now.</p>`;
       body.classList.add("clover-celebrate");
+      // Tell the community this code worked, so it turns green for everyone.
+      if (best.id) cloudSend({ type: "clover_vote", id: best.id, worked: true });
       setTimeout(() => setMood("idle"), 4000);
     } else {
       setMood("sad");
       say("None of them worked", { kind: "miss", hold: 4000 });
       body.innerHTML = `
         <p class="clover-line">No code worked this time.</p>
-        <p class="clover-sub">Tried ${codes.length}. That is normal, most public codes are dead.</p>`;
+        <p class="clover-sub">Tried ${list.length}. That is normal, most public codes are dead.</p>`;
       setTimeout(() => setMood("idle"), 3000);
     }
   }

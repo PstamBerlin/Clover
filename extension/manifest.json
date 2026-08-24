@@ -1,13 +1,19 @@
 {
   "manifest_version": 3,
   "name": "Clover",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Finds and tries coupon codes at checkout. No affiliate link swapping, ever.",
   "permissions": [
     "storage",
     "activeTab",
     "scripting"
   ],
+  "host_permissions": [
+    "https://zxsgxihknyexyzzpddmg.supabase.co/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
