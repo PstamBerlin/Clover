@@ -123,8 +123,11 @@
 
   // ---- typing a code + pressing apply (works across languages) --------
 
-  // Set a value the way React / Vue actually notice, not just el.value.
+  // Set a value the way React / Vue actually notice, and fire a full,
+  // realistic event burst so frameworks that only enable the Apply button
+  // after "typing" (keyup/input) unlock it.
   function setInputValue(el, value) {
+    try { el.focus(); } catch (e) {}
     try {
       const proto = el.tagName === "TEXTAREA"
         ? window.HTMLTextAreaElement.prototype
@@ -132,7 +135,11 @@
       const setter = Object.getOwnPropertyDescriptor(proto, "value").set;
       setter.call(el, value);
     } catch (e) { el.value = value; }
-    el.dispatchEvent(new Event("input", { bubbles: true }));
+    const last = value.slice(-1) || "";
+    el.dispatchEvent(new KeyboardEvent("keydown", { key: last, bubbles: true }));
+    el.dispatchEvent(new KeyboardEvent("keypress", { key: last, bubbles: true }));
+    el.dispatchEvent(new InputEvent("input", { bubbles: true, data: value, inputType: "insertText" }));
+    el.dispatchEvent(new KeyboardEvent("keyup", { key: last, bubbles: true }));
     el.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
@@ -175,19 +182,20 @@
     return null;
   }
 
-  // Type the code and try hard to submit it: button → form submit → Enter.
+  // Type the code and try hard to submit it: button → form submit → Enter,
+  // and if the button looks disabled, still try the other routes then click
+  // it anyway (some sites only grey it out with CSS).
   function applyCode(box, recipe, code) {
-    box.focus();
     setInputValue(box, code);
     const btn = findApplyButton(recipe, box);
-    if (btn) { btn.click(); return; }
-    if (box.form && box.form.requestSubmit) {
-      try { box.form.requestSubmit(); return; } catch (e) { /* fall through */ }
-    }
+    const usable = btn && !btn.disabled && btn.getAttribute("aria-disabled") !== "true";
+    if (usable) { btn.click(); return; }
+    if (box.form && box.form.requestSubmit) { try { box.form.requestSubmit(); } catch (e) {} }
     ["keydown", "keyup"].forEach((type) =>
       box.dispatchEvent(new KeyboardEvent(type, {
         key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true
       })));
+    if (btn) { try { btn.click(); } catch (e) {} }
   }
 
   // ---- badge ----------------------------------------------------------
