@@ -215,6 +215,59 @@ function favicon(store) {
 let COMMUNITY = [];
 let COMMUNITY_HOST = "";
 
+// One code card (the store name lives in the group header, not here).
+function cardEl(r, voted) {
+  const up = r.works || 0, down = r.fails || 0, reports = up + down;
+  const mine = voted[r.id];
+
+  let okText = "";
+  if (reports === 0) okText = `<span class="untested">nobody has tried it yet</span>`;
+  else if (up > down) okText = `<span class="proof">people say it works</span>`;
+
+  const el = document.createElement("div");
+  el.className = "code";
+  el.innerHTML = `
+    <div class="score">${ring(rate(up, down), rateLabel(up, down))}<small>worked</small></div>
+    <div class="code-main">
+      <div class="code-top">
+        ${r.code
+          ? `<span class="code-pill" title="Click to copy">${esc(r.code)}</span>`
+          : `<span class="code-deal">deal / link</span>`}
+      </div>
+      <div class="code-note">${esc(r.label || r.detail || "")}</div>
+      <div class="code-meta">${okText}<span>${reports} ${reports === 1 ? "report" : "reports"}</span></div>
+    </div>
+    <div class="votes">
+      <button class="vote up${mine === "up" ? " chosen" : ""}" ${mine ? "disabled" : ""}
+        title="${mine === "up" ? "You said this worked" : "This code worked for me"}">Worked</button>
+      <button class="vote down${mine === "down" ? " chosen" : ""}" ${mine ? "disabled" : ""}
+        title="${mine === "down" ? "You said this failed" : "This code did not work"}">Nope</button>
+    </div>`;
+
+  const pill = el.querySelector(".code-pill");
+  if (pill) pill.onclick = () => {
+    navigator.clipboard && navigator.clipboard.writeText(r.code);
+    const old = pill.textContent;
+    pill.classList.add("copied"); pill.textContent = "copied";
+    setTimeout(() => { pill.textContent = old; pill.classList.remove("copied"); }, 1100);
+  };
+
+  el.querySelectorAll(".vote").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      if (voted[r.id]) return;
+      const worked = btn.classList.contains("up");
+      voted[r.id] = worked ? "up" : "down";
+      await setVoted(voted);
+      if (worked) r.works = up + 1; else r.fails = down + 1;
+      cloudSend({ type: "clover_vote", id: r.id, worked });
+      renderCommunity();
+    });
+  });
+  return el;
+}
+
+const tierOf = (r) => { const pc = rate(r.works || 0, r.fails || 0); return pc === null ? 1 : (pc >= 50 ? 0 : 2); };
+
 async function renderCommunity() {
   const list = document.getElementById("community-list");
   if (!list) return;
@@ -222,84 +275,66 @@ async function renderCommunity() {
   const voted = await getVoted();
 
   let rows = COMMUNITY.slice();
-  const filter = search || COMMUNITY_HOST;
-  if (filter) {
-    const matched = rows.filter((r) => {
-      const s = String(r.store || "").toLowerCase();
-      return s.includes(filter) || filter.includes(s);
-    });
-    rows = (matched.length === 0 && !search) ? rows : matched;
+  if (search) {
+    rows = rows.filter((r) =>
+      (String(r.store || "") + " " + String(r.code || "") + " " + String(r.label || "")).toLowerCase().includes(search));
   }
-
-  // Same three tiers as the site: worked first, untested next, failing last.
-  const tier = (r) => { const pc = rate(r.works || 0, r.fails || 0); return pc === null ? 1 : (pc >= 50 ? 0 : 2); };
-  rows.sort((a, b) => {
-    const ta = tier(a), tb = tier(b);
-    if (ta !== tb) return ta - tb;
-    return (rate(b.works || 0, b.fails || 0) || 0) - (rate(a.works || 0, a.fails || 0) || 0);
-  });
 
   list.innerHTML = "";
   if (rows.length === 0) {
-    list.innerHTML = `<div class="empty">No community codes yet.<br>Add one on the Add tab to be the first.</div>`;
+    list.innerHTML = `<div class="empty">No codes match that.</div>`;
     return;
   }
 
-  rows.slice(0, 40).forEach((r) => {
-    const up = r.works || 0, down = r.fails || 0, reports = up + down;
-    const pct = rate(up, down);
-    const mine = voted[r.id];
+  // group by store
+  const groups = {};
+  rows.forEach((r) => { const s = r.store || "?"; (groups[s] = groups[s] || []).push(r); });
 
-    let okText = "";
-    if (reports === 0) okText = `<span class="untested">nobody has tried it yet</span>`;
-    else if (up > down) okText = `<span class="proof">people say it works</span>`;
+  const isActive = (s) => !!COMMUNITY_HOST && (s.includes(COMMUNITY_HOST) || COMMUNITY_HOST.includes(s));
+  const hasWorked = (s) => groups[s].some((r) => tierOf(r) === 0);
 
-    const el = document.createElement("div");
-    el.className = "code";
-    el.innerHTML = `
-      <div class="score">${ring(pct, rateLabel(up, down))}<small>worked</small></div>
-      <img class="favicon" src="${favicon(r.store)}" alt="">
-      <div class="code-main">
-        <div class="code-top">
-          <span class="code-store">${esc(r.store)}</span>
-          ${r.code
-            ? `<span class="code-pill" title="Click to copy">${esc(r.code)}</span>`
-            : `<span class="code-deal">deal / link</span>`}
-        </div>
-        <div class="code-note">${esc(r.label || r.detail || "")}</div>
-        <div class="code-meta">
-          ${okText}
-          <span>${reports} ${reports === 1 ? "report" : "reports"}</span>
-        </div>
-      </div>
-      <div class="votes">
-        <button class="vote up${mine === "up" ? " chosen" : ""}" ${mine ? "disabled" : ""}
-          title="${mine === "up" ? "You said this worked" : "This code worked for me"}">Worked</button>
-        <button class="vote down${mine === "down" ? " chosen" : ""}" ${mine ? "disabled" : ""}
-          title="${mine === "down" ? "You said this failed" : "This code did not work"}">Nope</button>
-      </div>`;
+  // stores: the site you're on first, then stores that have a working code, then A–Z
+  const stores = Object.keys(groups).sort((a, b) => {
+    const aa = isActive(a) ? 0 : 1, ba = isActive(b) ? 0 : 1;
+    if (aa !== ba) return aa - ba;
+    const wa = hasWorked(a) ? 0 : 1, wb = hasWorked(b) ? 0 : 1;
+    if (wa !== wb) return wa - wb;
+    return a.localeCompare(b);
+  });
+  const anyActive = stores.some(isActive);
 
-    const pill = el.querySelector(".code-pill");
-    if (pill) pill.onclick = () => {
-      navigator.clipboard && navigator.clipboard.writeText(r.code);
-      const old = pill.textContent;
-      pill.classList.add("copied"); pill.textContent = "copied";
-      setTimeout(() => { pill.textContent = old; pill.classList.remove("copied"); }, 1100);
-    };
-
-    el.querySelectorAll(".vote").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        if (voted[r.id]) return;
-        const worked = btn.classList.contains("up");
-        voted[r.id] = worked ? "up" : "down";
-        await setVoted(voted);
-        if (worked) r.works = up + 1; else r.fails = down + 1;
-        cloudSend({ type: "clover_vote", id: r.id, worked });
-        renderCommunity();
-      });
+  stores.forEach((store, i) => {
+    const arr = groups[store];
+    arr.sort((a, b) => {
+      const ta = tierOf(a), tb = tierOf(b);
+      if (ta !== tb) return ta - tb;
+      return (rate(b.works || 0, b.fails || 0) || 0) - (rate(a.works || 0, a.fails || 0) || 0);
     });
 
-    list.appendChild(el);
+    const section = document.createElement("div");
+    section.className = "cstore";
+    // open by default: while searching, the active site's store, or the first one if none match
+    const open = !!search || isActive(store) || (!anyActive && i === 0);
+    if (!open) section.classList.add("collapsed");
+
+    const workedCount = arr.filter((r) => tierOf(r) === 0).length;
+    const head = document.createElement("button");
+    head.className = "cstore-head";
+    head.innerHTML =
+      `<img class="cstore-fav" src="${favicon(store)}" alt="">` +
+      `<span class="cstore-name">${esc(store)}</span>` +
+      (workedCount ? `<span class="cstore-worked" title="${workedCount} confirmed working">${workedCount}✓</span>` : "") +
+      `<span class="cstore-count">${arr.length}</span>` +
+      `<span class="cstore-chev">▾</span>`;
+    head.addEventListener("click", () => section.classList.toggle("collapsed"));
+
+    const body = document.createElement("div");
+    body.className = "cstore-body";
+    arr.forEach((r) => body.appendChild(cardEl(r, voted)));
+
+    section.appendChild(head);
+    section.appendChild(body);
+    list.appendChild(section);
   });
 }
 

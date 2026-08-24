@@ -350,6 +350,30 @@ footer{
 .vote.chosen::after{content:" \2713";font-size:.7rem;opacity:.7}
 .vote:disabled{cursor:default}
 
+/* ---------- store groups ---------- */
+.cstore{margin-bottom:9px}
+.cstore-head{
+  display:flex;align-items:center;gap:8px;width:100%;
+  background:var(--mist);border:1.5px solid var(--line);border-radius:12px;
+  padding:9px 12px;font:inherit;cursor:pointer;color:var(--pine);text-align:left;
+  transition:border-color .15s,background .15s;
+}
+.cstore-head:hover{border-color:var(--spring-deep);background:#eafaf0}
+.cstore-fav{width:20px;height:20px;border-radius:5px;flex-shrink:0}
+.cstore-name{font-weight:800;font-size:.86rem;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cstore-worked{
+  font-size:.66rem;font-weight:800;color:var(--pine);background:var(--spring);
+  border-radius:20px;padding:2px 8px;flex-shrink:0;
+}
+.cstore-count{
+  font-size:.7rem;font-weight:700;color:var(--muted);background:var(--paper);
+  border:1px solid var(--line);border-radius:20px;padding:1px 8px;flex-shrink:0;
+}
+.cstore-chev{color:var(--muted);font-size:.8rem;transition:transform .18s;flex-shrink:0}
+.cstore.collapsed .cstore-chev{transform:rotate(-90deg)}
+.cstore-body{padding-top:8px}
+.cstore.collapsed .cstore-body{display:none}
+
 /* ============================================================
    PHONES
    Firefox Android opens the popup as a full page, not a small
