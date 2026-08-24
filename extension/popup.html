@@ -30,8 +30,9 @@
 
 <nav class="tabs">
   <button class="tab is-on" data-tab="saved">Saved</button>
+  <button class="tab" data-tab="community">Community</button>
   <button class="tab" data-tab="add">Add</button>
-  <button class="tab" data-tab="always">Always on</button>
+  <button class="tab" data-tab="always">Always</button>
 </nav>
 
 <main>
@@ -41,8 +42,14 @@
     <div id="saved-list"></div>
   </section>
 
+  <section id="panel-community" class="panel">
+    <p class="hint">Codes real people shared. <b class="ok-word">Green</b> means someone confirmed it worked.</p>
+    <input id="c-search" class="c-search" type="text" placeholder="Filter by store…" autocomplete="off">
+    <div id="community-list"><div class="empty">Loading community codes…</div></div>
+  </section>
+
   <section id="panel-add" class="panel">
-    <p class="hint">Found a code that worked? Save it here.</p>
+    <p class="hint">Found a code that worked? Save it for yourself and share it with everyone.</p>
     <label>Store
       <input id="f-store" type="text" placeholder="nike.com" autocomplete="off">
     </label>
@@ -52,7 +59,7 @@
     <label>What it does
       <input id="f-note" type="text" placeholder="20% off, no minimum" autocomplete="off">
     </label>
-    <button id="save-btn" class="primary">Save code</button>
+    <button id="save-btn" class="primary">Save &amp; share</button>
     <p class="status" id="status"></p>
   </section>
 

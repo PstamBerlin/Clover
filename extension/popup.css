@@ -293,6 +293,51 @@ footer{
   border-radius:6px;
 }
 
+/* ---------- community ---------- */
+.c-search{ margin-bottom:12px; }
+.ok-word{ color:var(--spring-deep); }
+
+.crow{
+  background:var(--paper);
+  border:1.5px solid var(--line);
+  border-radius:12px;
+  padding:10px 12px;
+  margin-bottom:8px;
+  animation:rise .3s backwards;
+}
+.crow.is-worked{ border-color:var(--spring); background:#f2fdf6; }
+.crow-top{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.crow-store{ font-weight:700; font-size:.84rem; }
+.crow-note{ font-size:.73rem; color:var(--muted); margin-top:2px; }
+.crow-mid{ display:flex; align-items:center; gap:8px; margin-top:8px; }
+.crow-code{
+  font-family:"SF Mono",Menlo,Consolas,monospace;
+  background:var(--pine); color:var(--spring);
+  padding:4px 9px; border-radius:7px; font-size:.76rem; white-space:nowrap;
+}
+.crow-deal{ font-size:.76rem; color:var(--muted); font-style:italic; }
+
+.cbadge{
+  font-size:.68rem; font-weight:800; letter-spacing:.03em;
+  padding:3px 8px; border-radius:20px; white-space:nowrap;
+}
+.cbadge.worked{ background:var(--spring); color:var(--pine); }
+.cbadge.high{ background:#d8f6e4; color:var(--spring-deep); }
+.cbadge.mixed{ background:#fff2cc; color:#8a6d16; }
+.cbadge.low{ background:#fde2df; color:#c0392b; }
+.cbadge.untested{ background:#eef3ef; color:var(--muted); }
+
+.votes{ display:flex; gap:6px; margin-left:auto; }
+.vote{
+  border:1.5px solid var(--line); background:#fff; border-radius:8px;
+  padding:5px 9px; font:inherit; font-size:.8rem; cursor:pointer;
+  transition:transform .12s, background .12s, border-color .12s;
+}
+.vote:hover{ transform:translateY(-1px); }
+.vote.up.on{ background:var(--spring); border-color:var(--spring-deep); }
+.vote.down.on{ background:#fde2df; border-color:#c0392b; }
+.vote:disabled{ opacity:.5; cursor:default; transform:none; }
+
 /* ============================================================
    PHONES
    Firefox Android opens the popup as a full page, not a small
