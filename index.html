@@ -1924,6 +1924,7 @@ async function getCodes(){
   loaded.forEach(c=>{ if(c.seed && c.by==="Peter") c.by="Clover"; });
   // the starter codes are folded in here, so the list is never empty
   MEM = mergeSeed(loaded);
+  if(!cloudSynced){ try{ await cloudReconcile(MEM); }catch(e){} }
   return MEM;
 }
 
@@ -1967,6 +1968,67 @@ async function putCodes(c){
   }catch(e){
     storageOK = false;
   }
+}
+
+/* ---------- shared live database (Supabase) ----------
+   The site still works entirely on its own; this only layers the shared
+   database on top: live vote counts, community-added codes, and votes that
+   everyone sees. If Supabase is unreachable, the site falls back to local. */
+const SUPA_URL = "https://zxsgxihknyexyzzpddmg.supabase.co";
+const SUPA_KEY = "sb_publishable_wbAdbAS-TPcojUiQMNr-jg_Zv72DF7p"; // public key, safe to ship
+const SUPA_H = { "apikey": SUPA_KEY, "Authorization": "Bearer " + SUPA_KEY, "Content-Type": "application/json" };
+let cloudSynced = false;
+
+async function cloudFetchCodes(){
+  const r = await fetch(SUPA_URL + "/rest/v1/code_stats?select=*", { headers: SUPA_H });
+  if(!r.ok) throw new Error("codes " + r.status);
+  return await r.json();
+}
+function cloudVote(codeId, worked){
+  fetch(SUPA_URL + "/rest/v1/votes", { method:"POST", headers: SUPA_H,
+    body: JSON.stringify({ code_id: codeId, worked: !!worked }) }).catch(function(){});
+}
+async function cloudAddCode(row){
+  try{
+    const r = await fetch(SUPA_URL + "/rest/v1/codes", { method:"POST",
+      headers: Object.assign({}, SUPA_H, { "Prefer":"return=representation" }),
+      body: JSON.stringify(row) });
+    if(r.ok){ const d = await r.json(); return (d && d[0]) ? d[0].id : null; }
+  }catch(e){}
+  return null;
+}
+
+// Fold the live database into the in-memory list: overlay real vote counts,
+// remember each code's cloud id, and add community codes we do not have yet.
+async function cloudReconcile(list){
+  let cloud;
+  try{ cloud = await cloudFetchCodes(); }catch(e){ return; }
+  const byKey = new Map();
+  cloud.forEach(function(cc){ byKey.set((cc.store||"") + "|" + (cc.code||""), cc); });
+  const localKeys = new Set();
+  list.forEach(function(c){
+    localKeys.add(c.store + "|" + c.code);
+    const cc = byKey.get(c.store + "|" + c.code);
+    if(cc){
+      c.sid = cc.id;
+      c.up = cc.works || 0;
+      c.down = cc.fails || 0;
+      if(c.up > 0 && !c.lastOk) c.lastOk = Date.now();
+    }
+  });
+  cloud.forEach(function(cc){
+    const key = (cc.store||"") + "|" + (cc.code||"");
+    if(cc.code && !localKeys.has(key)){
+      list.push({
+        id: "cloud" + cc.id, sid: cc.id, store: cc.store, code: cc.code,
+        note: cc.label || "", limits: cc.detail || "", cat: "other", country: "XX",
+        by: "Clover", single: undefined, bot: null, testedOn: null, exp: null,
+        up: cc.works || 0, down: cc.fails || 0, at: Date.now(),
+        lastOk: (cc.works||0) > 0 ? Date.now() : null, cloud: true
+      });
+    }
+  });
+  cloudSynced = true;
 }
 
 async function getEvents(){
@@ -3611,6 +3673,9 @@ async function vote(id,dir){
 
   await putCodes(codes);
   await saveVoted();
+  // Mirror the vote to the shared database. Append-only, and the local
+  // `voted` guard means each device only adds one, so we send it once.
+  if(c.sid && !had) cloudVote(c.sid, dir==="up");
   if(!had) await logEvent(dir==="up"?"worked":"failed", c.store, c.code, null);
   draw();
 }
@@ -3857,13 +3922,16 @@ document.getElementById("save").addEventListener("click",async ()=>{
     }
 
     const id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-    codes.push({
+    const newCode={
       id, store, code, note, limits, by, exp:exp||null, country, cat,
       up:0, down:0, at:Date.now(), lastOk:null
-    });
+    };
+    codes.push(newCode);
     await putCodes(codes);
     mine.push(id);
     await saveMine();
+    // Share it to the live database, and remember its cloud id so votes count.
+    try{ const sid=await cloudAddCode({store, code, label:note||null, detail:limits||null, kind:"code"}); if(sid) newCode.sid=sid; }catch(e){}
     await logEvent("added", store, code, by);
 
     st.textContent="Added. It is in the list now.";
