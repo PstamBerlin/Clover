@@ -27,22 +27,32 @@ const CLOVER_RECIPES = [
     matches: ["*"],
     // Generic fallback: guesses based on common naming across most stores.
     codeInput: [
-      "input[name*='promo' i]",
-      "input[name*='coupon' i]",
-      "input[name*='discount' i]",
-      "input[id*='promo' i]",
-      "input[id*='coupon' i]",
-      "input[id*='discount' i]",
-      "input[placeholder*='promo' i]",
-      "input[placeholder*='coupon' i]",
-      "input[placeholder*='discount' i]"
+      // English
+      "input[name*='promo' i]", "input[id*='promo' i]", "input[placeholder*='promo' i]", "input[aria-label*='promo' i]",
+      "input[name*='coupon' i]", "input[id*='coupon' i]", "input[placeholder*='coupon' i]", "input[aria-label*='coupon' i]",
+      "input[name*='discount' i]", "input[id*='discount' i]", "input[placeholder*='discount' i]", "input[aria-label*='discount' i]",
+      "input[name*='voucher' i]", "input[id*='voucher' i]", "input[placeholder*='voucher' i]",
+      // German
+      "input[name*='gutschein' i]", "input[id*='gutschein' i]", "input[placeholder*='gutschein' i]", "input[aria-label*='gutschein' i]",
+      "input[name*='rabatt' i]", "input[id*='rabatt' i]", "input[placeholder*='rabatt' i]",
+      "input[name*='aktionscode' i]", "input[placeholder*='aktionscode' i]",
+      // Dutch / French / Spanish / Italian
+      "input[name*='kortingscode' i]", "input[placeholder*='kortingscode' i]",
+      "input[name*='cupon' i]", "input[placeholder*='cupon' i]", "input[placeholder*='cupón' i]",
+      "input[name*='reduction' i]", "input[placeholder*='promotionnel' i]",
+      "input[name*='sconto' i]", "input[placeholder*='sconto' i]",
+      // last, broad: a field that just says "code"
+      "input[placeholder*='code' i]", "input[aria-label*='code' i]"
     ].join(", "),
     applyButton: [
-      "button[id*='promo' i]",
-      "button[id*='coupon' i]",
-      "button[class*='promo' i]",
-      "button[class*='coupon' i]"
+      "button[id*='promo' i]", "button[id*='coupon' i]", "button[id*='apply' i]",
+      "button[class*='promo' i]", "button[class*='coupon' i]", "button[class*='apply' i]",
+      "button[class*='gutschein' i]", "button[class*='rabatt' i]",
+      "button[class*='einlosen' i]", "button[class*='anwenden' i]"
     ].join(", "),
+    // Note: content.js also finds the apply button by its visible text
+    // ("Apply", "Einlösen", "Anwenden", "Appliquer"...) so most stores work
+    // even when the button has no promo/coupon in its id or class.
     total: [
       "[class*='total' i]",
       "[id*='total' i]"

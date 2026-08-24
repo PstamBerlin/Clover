@@ -61,6 +61,75 @@
     });
   }
 
+  // ---- typing a code + pressing apply (works across languages) --------
+
+  // Set a value the way React / Vue actually notice, not just el.value.
+  function setInputValue(el, value) {
+    try {
+      const proto = el.tagName === "TEXTAREA"
+        ? window.HTMLTextAreaElement.prototype
+        : window.HTMLInputElement.prototype;
+      const setter = Object.getOwnPropertyDescriptor(proto, "value").set;
+      setter.call(el, value);
+    } catch (e) { el.value = value; }
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  // Words that mean "apply / redeem" in the languages Clover runs into.
+  // Uses Unicode-letter boundaries (not \b) so German words that start/end
+  // with ä/ö/ü/ß match too, and so it never fires on a partial word.
+  // Kept specific so it never clicks "Pay", "Remove" or "Add to cart".
+  const APPLY_WORDS = /(?:^|[^\p{L}])(apply|redeem|apply code|add code|use code|einlösen|einlosen|anwenden|übernehmen|ubernehmen|einreichen|aktivieren|hinzufügen|hinzufugen|appliquer|valider|canjear|aplicar|applica|riscatta|toepassen|inwisselen|activeren|zastosuj|primeni)(?:[^\p{L}]|$)/iu;
+
+  function findApplyButton(recipe, box) {
+    // 1) the store recipe's own selector, if it points at something visible
+    if (recipe && recipe.applyButton) {
+      const el = document.querySelector(recipe.applyButton);
+      if (el && el.offsetParent !== null) return el;
+    }
+    // 2) a button whose TEXT means "apply", in any language. Search the
+    //    smallest ancestor of the code box that actually contains a button
+    //    — never the box itself, since its own id may contain "promo".
+    let scope = box && box.form;
+    if (!scope && box) {
+      let el = box.parentElement;
+      for (let i = 0; i < 6 && el; i++) {
+        if (el.querySelector("button, input[type='submit'], input[type='button'], [role='button']")) { scope = el; break; }
+        el = el.parentElement;
+      }
+    }
+    scope = scope || document;
+    const cands = Array.from(scope.querySelectorAll(
+      "button, input[type='submit'], input[type='button'], [role='button'], a"));
+    const hit = cands.find((el) =>
+      el !== box && el.offsetParent !== null &&
+      APPLY_WORDS.test((el.textContent || el.value || el.getAttribute("aria-label") || "")));
+    if (hit) return hit;
+    // 3) a lone submit button inside the same little form
+    if (box && box.form) {
+      const sub = box.form.querySelector(
+        "button[type='submit'], input[type='submit'], button:not([type])");
+      if (sub && sub.offsetParent !== null) return sub;
+    }
+    return null;
+  }
+
+  // Type the code and try hard to submit it: button → form submit → Enter.
+  function applyCode(box, recipe, code) {
+    box.focus();
+    setInputValue(box, code);
+    const btn = findApplyButton(recipe, box);
+    if (btn) { btn.click(); return; }
+    if (box.form && box.form.requestSubmit) {
+      try { box.form.requestSubmit(); return; } catch (e) { /* fall through */ }
+    }
+    ["keydown", "keyup"].forEach((type) =>
+      box.dispatchEvent(new KeyboardEvent(type, {
+        key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true
+      })));
+  }
+
   // ---- badge ----------------------------------------------------------
 
   const badge = document.createElement("div");
@@ -335,12 +404,7 @@
         const recipe = pickRecipe();
         const box = findCodeBox(recipe);
         if (box) {
-          box.focus();
-          box.value = btn.dataset.code;
-          box.dispatchEvent(new Event("input", { bubbles: true }));
-          box.dispatchEvent(new Event("change", { bubbles: true }));
-          const applyBtn = document.querySelector(recipe.applyButton);
-          if (applyBtn) applyBtn.click();
+          applyCode(box, recipe, btn.dataset.code);
           btn.textContent = "Applied";
         } else {
           navigator.clipboard?.writeText(btn.dataset.code);
@@ -408,13 +472,7 @@
       currentEl.textContent = `${item.code}  (${i + 1} of ${list.length})`;
       say(item.code, { kind: "code" });
 
-      box.focus();
-      box.value = item.code;
-      box.dispatchEvent(new Event("input", { bubbles: true }));
-      box.dispatchEvent(new Event("change", { bubbles: true }));
-
-      const applyBtn = document.querySelector(recipe.applyButton);
-      if (applyBtn) applyBtn.click();
+      applyCode(box, recipe, item.code);
 
       await new Promise((r) => setTimeout(r, S.delay || 1400));
 
