@@ -1,0 +1,315 @@
+:root {
+  --spring: #7fe3a0;
+  --spring-soft: #b6f5cd;
+  --spring-deep: #34b26c;
+  --pine: #16382a;
+  --mist: #f2fdf6;
+  --paper: #ffffff;
+  --gold: #ffd24a;
+  --muted: #61796d;
+  --line: #d3ecdc;
+}
+
+* { box-sizing: border-box; }
+
+body{
+  width: 340px;
+  margin: 0;
+  font-family: "Avenir Next","Segoe UI",-apple-system,Arial,sans-serif;
+  background: #f2f7f0;
+  color: var(--pine);
+  font-size: 14.5px;
+}
+
+/* ---------- hero ---------- */
+.hero {
+  position: relative;
+  background: var(--pine);
+  padding: 22px 18px 20px;
+  text-align: center;
+  overflow: hidden;
+}
+.hero-glow {
+  position: absolute;
+  inset: -60% 20% auto 20%;
+  height: 180px;
+  background: radial-gradient(circle, rgba(127,227,160,.5), transparent 68%);
+  animation: drift 7s ease-in-out infinite;
+}
+@keyframes drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(12px, 14px) scale(1.14); }
+}
+
+.hero-mark {
+  position: relative;
+  width: 52px;
+  height: 52px;
+}
+.hero-mark .spin {
+  transform-origin: 50px 50px;
+  animation: tumble 9s cubic-bezier(.5,0,.5,1) infinite;
+}
+.hero-mark .leaves{ fill: var(--spring); }
+.hero-mark .stem{ color: var(--spring); }
+.hero-mark .eye{ fill: var(--pine); }
+.hero-mark .mouth{ stroke: var(--pine); }
+@keyframes tumble {
+  0%, 72%  { transform: rotate(0deg); }
+  86%      { transform: rotate(370deg); }
+  100%     { transform: rotate(360deg); }
+}
+
+.hero h1 {
+  position: relative;
+  margin: 6px 0 2px;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: .16em;
+  color: var(--spring);
+}
+.tag {
+  position: relative;
+  margin: 0;
+  font-size: .72rem;
+  letter-spacing: .04em;
+  color: var(--spring-soft);
+  opacity: .82;
+}
+
+/* ---------- tabs ---------- */
+.tabs{
+  display: flex;
+  gap: 6px;
+  padding: 10px 14px 0;
+}
+.tab{
+  flex: 1;
+  border: 2px solid var(--pine);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--pine);
+  padding: 8px 4px;
+  font: inherit;
+  font-size: .74rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background .12s;
+}
+.tab:hover { color: var(--pine); }
+.tab::after {
+  content: "";
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  bottom: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--spring);
+  transform: scaleX(0);
+  transition: transform .26s cubic-bezier(.2,.9,.3,1.4);
+}
+.tab.is-on { color: var(--pine); }
+.tab.is-on::after { transform: scaleX(1); }
+
+/* ---------- panels ---------- */
+main { padding: 16px 16px 8px; min-height: 190px; }
+.panel { display: none; }
+.panel.is-on {
+  display: block;
+  animation: rise .3s cubic-bezier(.2,.9,.3,1.2);
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.hint {
+  margin: 0 0 12px;
+  font-size: .78rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* ---------- form ---------- */
+label {
+  display: block;
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+input {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 10px 11px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  font: inherit;
+  font-size: .88rem;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--pine);
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+input:focus {
+  outline: none;
+  border-color: var(--spring-deep);
+  box-shadow: 0 0 0 3px rgba(127,227,160,.32);
+}
+input::placeholder { color: #a8bdb1; }
+
+.primary {
+  width: 100%;
+  border: none;
+  border-radius: 11px;
+  padding: 12px;
+  margin-top: 2px;
+  font: inherit;
+  font-size: .9rem;
+  font-weight: 700;
+  color: var(--pine);
+  background: var(--spring);
+  cursor: pointer;
+  transition: transform .18s ease, background .18s ease, box-shadow .18s ease;
+}
+.primary:hover {
+  background: var(--spring-soft);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 14px rgba(52,178,108,.3);
+}
+.primary:active { transform: translateY(0); }
+
+.status {
+  margin: 8px 0 0;
+  font-size: .78rem;
+  min-height: 16px;
+}
+.status.ok { color: var(--spring-deep); }
+.status.err { color: #c0392b; }
+
+/* ---------- lists ---------- */
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--paper);
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  animation: rise .3s backwards;
+}
+.row:nth-child(2) { animation-delay: .04s; }
+.row:nth-child(3) { animation-delay: .08s; }
+.row:nth-child(4) { animation-delay: .12s; }
+
+.row-store { font-weight: 700; font-size: .86rem; }
+.row-note { font-size: .74rem; color: var(--muted); margin-top: 2px; }
+
+.pill {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  background: var(--pine);
+  color: var(--spring);
+  padding: 4px 9px;
+  border-radius: 7px;
+  font-size: .76rem;
+  white-space: nowrap;
+}
+.pct {
+  background: var(--spring);
+  color: var(--pine);
+  font-weight: 700;
+  padding: 5px 9px;
+  border-radius: 7px;
+  font-size: .78rem;
+}
+
+.kill {
+  border: none;
+  background: none;
+  color: #b9ccc0;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+  transition: color .18s ease, transform .18s ease;
+}
+.kill:hover { color: #c0392b; transform: scale(1.2); }
+
+.empty {
+  text-align: center;
+  padding: 26px 10px;
+  font-size: .82rem;
+  color: var(--muted);
+  border: 1.5px dashed var(--line);
+  border-radius: 12px;
+}
+
+footer {
+  padding: 10px 16px 14px;
+  font-size: .68rem;
+  color: var(--muted);
+  text-align: center;
+  border-top: 1px solid var(--line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+
+/* ---------- footer ---------- */
+footer{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  flex-wrap:wrap;
+}
+.footlink{
+  border:none;
+  background:none;
+  padding:0;
+  font:inherit;
+  font-size:.68rem;
+  font-weight:700;
+  color:var(--spring-deep);
+  cursor:pointer;
+  text-decoration:underline;
+}
+.footlink:hover{color:var(--pine)}
+.footdot{color:var(--line)}
+.foottext{color:var(--muted)}
+
+/* keyboard focus */
+:focus-visible{
+  outline:2.5px solid var(--spring-deep);
+  outline-offset:2px;
+  border-radius:6px;
+}
+
+/* ============================================================
+   PHONES
+   Firefox Android opens the popup as a full page, not a small
+   window, so the fixed 340px width leaves it stranded in the
+   corner of a large screen.
+   ============================================================ */
+@media (max-width: 420px), (pointer: coarse) {
+  body {
+    width: auto;
+    min-width: 0;
+    max-width: 100%;
+    font-size: 15.5px;
+  }
+  .tabs { padding: 12px 14px 0; }
+  .tab {
+    padding: 11px 6px;
+    font-size: .8rem;
+    min-height: 44px;
+  }
+}

@@ -1,0 +1,169 @@
+:root{
+  --spring:#7fe3a0;
+  --spring-deep:#34b26c;
+  --spring-pale:#b6f5cd;
+  --pine:#16382a;
+  --bg:#f2fdf6;
+  --card:#ffffff;
+  --line:#d3ecdc;
+  --ink:#16382a;
+  --muted:#61796d;
+  --danger:#c0392b;
+}
+
+[data-theme="dark"]{
+  --bg:#0f1f18;
+  --card:#16302a;
+  --line:#254a3b;
+  --ink:#e6f7ec;
+  --muted:#8fae9e;
+  --pine:#0b1a14;
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:"Avenir Next","Century Gothic","Futura","Trebuchet MS",sans-serif;
+  transition:background .25s, color .25s;
+}
+
+.head{
+  display:flex;align-items:center;gap:14px;
+  background:var(--pine);color:var(--spring);
+  padding:22px 26px;
+}
+.mark{width:40px;height:40px;flex-shrink:0}
+.head h1{margin:0;font-size:1.3rem;letter-spacing:.02em}
+.head p{margin:2px 0 0;font-size:.8rem;color:var(--spring-pale);opacity:.75}
+
+main{max-width:680px;margin:0 auto;padding:26px 20px 60px}
+
+.card{
+  background:var(--card);
+  border:2px solid var(--line);
+  border-radius:16px;
+  padding:20px;
+  margin-bottom:18px;
+}
+.card h2{
+  margin:0 0 4px;font-size:.72rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--spring-deep);
+}
+.note{
+  margin:0 0 14px;font-size:.8rem;color:var(--muted);line-height:1.5;
+}
+
+.row{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  gap:18px;padding:14px 0;border-bottom:1px solid var(--line);
+}
+.card h2 + .row{padding-top:10px}
+.row:last-child{border-bottom:none;padding-bottom:0}
+.row span{flex:1;min-width:0}
+.row b{display:block;font-size:.92rem;margin-bottom:2px}
+.row small{display:block;font-size:.78rem;color:var(--muted);line-height:1.5}
+
+select{
+  flex-shrink:0;
+  padding:9px 11px;border:2px solid var(--line);border-radius:10px;
+  background:var(--bg);color:var(--ink);font:inherit;font-size:.85rem;
+  cursor:pointer;min-width:150px;
+}
+select:focus{outline:none;border-color:var(--spring-deep)}
+
+/* --- switches --- */
+.switch{cursor:pointer;position:relative}
+.switch input{
+  position:absolute;opacity:0;width:0;height:0;
+}
+.track{
+  flex-shrink:0;position:relative;
+  width:46px;height:26px;border-radius:99px;
+  background:var(--line);transition:background .22s;margin-top:2px;
+}
+.track::after{
+  content:"";position:absolute;top:3px;left:3px;
+  width:20px;height:20px;border-radius:50%;
+  background:var(--card);
+  box-shadow:0 1px 3px rgba(0,0,0,.25);
+  transition:transform .22s cubic-bezier(.2,.9,.3,1.4);
+}
+.switch input:checked ~ .track{background:var(--spring-deep)}
+.switch input:checked ~ .track::after{transform:translateX(20px)}
+.switch input:focus-visible ~ .track{
+  outline:3px solid var(--spring-pale);outline-offset:2px;
+}
+
+/* --- slider --- */
+.slider{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.slider input{accent-color:var(--spring-deep);width:130px}
+.slider output{
+  font-size:.82rem;font-weight:700;color:var(--spring-deep);
+  min-width:44px;text-align:right;
+}
+
+/* --- text areas --- */
+.stack{display:grid;gap:14px}
+.field b{display:block;font-size:.9rem;margin-bottom:2px}
+.field small{display:block;font-size:.78rem;color:var(--muted);margin-bottom:7px;line-height:1.5}
+textarea{
+  width:100%;padding:11px 13px;
+  border:2px solid var(--line);border-radius:11px;
+  background:var(--bg);color:var(--ink);
+  font-family:"SF Mono",Menlo,Consolas,monospace;font-size:.84rem;
+  resize:vertical;line-height:1.6;
+}
+textarea:focus{outline:none;border-color:var(--spring-deep)}
+
+/* --- danger --- */
+.danger{border-color:#e8c9c4}
+[data-theme="dark"] .danger{border-color:#5a2f28}
+.danger h2{color:var(--danger)}
+#reset{
+  border:2px solid var(--danger);background:none;color:var(--danger);
+  border-radius:11px;padding:10px 18px;font:inherit;font-size:.86rem;
+  font-weight:700;cursor:pointer;transition:background .18s,color .18s;
+}
+#reset:hover{background:var(--danger);color:#fff}
+
+/* --- saved toast --- */
+.saved{
+  position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);
+  background:var(--pine);color:var(--spring);
+  padding:9px 18px;border-radius:99px;
+  font-size:.82rem;font-weight:700;
+  opacity:0;pointer-events:none;
+  transition:opacity .25s, transform .25s cubic-bezier(.2,.9,.3,1.3);
+  margin:0;
+}
+.saved.show{opacity:1;transform:translate(-50%,0)}
+
+@media(prefers-reduced-motion:reduce){
+  *{transition:none!important}
+}
+
+/* ============================================================
+   PHONES
+   The settings page opens as a full tab on Android.
+   ============================================================ */
+@media (max-width: 560px), (pointer: coarse) {
+  body { padding: 16px 14px 40px; font-size: 15.5px; }
+  .row {
+    padding: 13px 0;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .row label { flex: 1 1 auto; min-width: 0 }
+  /* switches and inputs need to be thumb sized */
+  input[type="checkbox"] { width: 22px; height: 22px }
+  input[type="range"] { min-height: 34px }
+  input[type="text"], textarea, select {
+    font-size: 16px;   /* under 16px, phones zoom in on focus */
+    padding: 11px 12px;
+    min-height: 44px;
+  }
+  button { min-height: 44px; font-size: .92rem }
+}

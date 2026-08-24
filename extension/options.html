@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clover settings</title>
+<link rel="stylesheet" href="options.css">
+</head>
+<body>
+
+<header class="head">
+  <svg viewBox="0 0 100 100" class="mark">
+    <g fill="currentColor">
+      <path d="M50 50 C50 34 40 24 30 28 C20 32 20 46 32 50 C40 53 46 53 50 50Z"/>
+      <path d="M50 50 C66 50 76 40 72 30 C68 20 54 20 50 32 C47 40 47 46 50 50Z"/>
+      <path d="M50 50 C50 66 60 76 70 72 C80 68 80 54 68 50 C60 47 54 47 50 50Z"/>
+      <path d="M50 50 C34 50 24 60 28 70 C32 80 46 80 50 68 C53 60 53 54 50 50Z"/>
+    </g>
+    <circle cx="50" cy="50" r="6" fill="var(--bg)"/>
+  </svg>
+  <div>
+    <h1>Clover settings</h1>
+    <p>Changes save as you make them.</p>
+  </div>
+</header>
+
+<main>
+
+  <section class="card">
+    <h2>The basics</h2>
+
+    <label class="row switch">
+      <span>
+        <b>Clover is on</b>
+        <small>Turn this off and it does nothing anywhere, without uninstalling.</small>
+      </span>
+      <input type="checkbox" id="enabled">
+      <i class="track"></i>
+    </label>
+
+    <div class="row">
+      <span>
+        <b>When to show up</b>
+        <small>Checkout only is the quiet option. Always means the clover sits on every page.</small>
+      </span>
+      <select id="showOrb">
+        <option value="checkout">Checkout pages only</option>
+        <option value="always">Every page</option>
+        <option value="never">Never show the clover</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <span>
+        <b>Which side</b>
+        <small>Move it if it covers something.</small>
+      </span>
+      <select id="position">
+        <option value="right">Bottom right</option>
+        <option value="left">Bottom left</option>
+      </select>
+    </div>
+
+    <label class="row switch">
+      <span>
+        <b>Try codes without asking</b>
+        <small>Off by default. Some stores lock you out if codes are tried too often, so being asked first is safer.</small>
+      </span>
+      <input type="checkbox" id="autoTry">
+      <i class="track"></i>
+    </label>
+
+    <div class="row">
+      <span>
+        <b>Wait between codes</b>
+        <small>Longer is gentler on the store. Under a second can trip rate limits.</small>
+      </span>
+      <div class="slider">
+        <input type="range" id="delay" min="600" max="4000" step="200">
+        <output id="delayOut"></output>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Where it helps</h2>
+    <p class="note">Leave both empty and Clover works everywhere. Put one store per line.</p>
+
+    <div class="stack">
+      <label class="field">
+        <b>Never help on these</b>
+        <small>Useful for work sites, banking, anywhere you would rather it stayed out.</small>
+        <textarea id="blocked" rows="4" placeholder="mybank.com&#10;work-portal.com"></textarea>
+      </label>
+
+      <label class="field">
+        <b>Only help on these</b>
+        <small>Fill this in and everything else is ignored, including the blocked list.</small>
+        <textarea id="onlyThese" rows="4" placeholder="zalando.nl&#10;elegoo.com"></textarea>
+      </label>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Look and feel</h2>
+
+    <div class="row">
+      <span>
+        <b>Theme</b>
+        <small>Auto follows whatever your system is set to.</small>
+      </span>
+      <select id="theme">
+        <option value="auto">Match my system</option>
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+      </select>
+    </div>
+
+    <label class="row switch">
+      <span>
+        <b>Mascot face</b>
+        <small>The clover blinks, looks around while searching, and reacts. Off gives you a plain clover.</small>
+      </span>
+      <input type="checkbox" id="mascot">
+      <i class="track"></i>
+    </label>
+
+    <label class="row switch">
+      <span>
+        <b>Confetti when you save</b>
+        <small>The burst is sized to what you actually saved, so a small saving gets a small celebration.</small>
+      </span>
+      <input type="checkbox" id="confetti">
+      <i class="track"></i>
+    </label>
+  </section>
+
+  <section class="card">
+    <h2>Creator deals</h2>
+
+    <label class="row switch">
+      <span>
+        <b>Point out creator deals</b>
+        <small>Some offers live behind a creator's link. Clover tells you one exists and lets you choose. It never opens it for you, and it says nothing if you already arrived through somebody's referral link.</small>
+      </span>
+      <input type="checkbox" id="creatorDeals">
+      <i class="track"></i>
+    </label>
+  </section>
+
+  <section class="card danger">
+    <h2>Start over</h2>
+    <p class="note">Puts every setting back to how it shipped. Your saved codes are not touched.</p>
+    <button id="reset">Reset settings</button>
+  </section>
+
+  <p class="saved" id="saved">Saved</p>
+
+</main>
+
+<script src="settings.js"></script>
+<script src="options.js"></script>
+</body>
+</html>

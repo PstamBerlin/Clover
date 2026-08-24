@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-glow"></div>
+  <svg viewBox="0 0 100 100" class="hero-mark">
+    <g class="spin">
+      <path d="M50 56 Q47 74 38 88" stroke="currentColor" stroke-width="5"
+            fill="none" stroke-linecap="round" class="stem"/>
+      <g class="leaves">
+        <path d="M50 50 C50 34 40 24 30 28 C20 32 20 46 32 50 C40 53 46 53 50 50Z"/>
+        <path d="M50 50 C66 50 76 40 72 30 C68 20 54 20 50 32 C47 40 47 46 50 50Z"/>
+        <path d="M50 50 C50 66 60 76 70 72 C80 68 80 54 68 50 C60 47 54 47 50 50Z"/>
+        <path d="M50 50 C34 50 24 60 28 70 C32 80 46 80 50 68 C53 60 53 54 50 50Z"/>
+      </g>
+      <circle cx="43" cy="48" r="3.2" class="eye"/>
+      <circle cx="57" cy="48" r="3.2" class="eye"/>
+      <path d="M44 57 Q50 61 56 57" fill="none" stroke-width="2.4"
+            stroke-linecap="round" class="mouth"/>
+    </g>
+  </svg>
+  <h1>clover</h1>
+  <p class="tag">codes that work, credit where it is due</p>
+</header>
+
+<nav class="tabs">
+  <button class="tab is-on" data-tab="saved">Saved</button>
+  <button class="tab" data-tab="add">Add</button>
+  <button class="tab" data-tab="always">Always on</button>
+</nav>
+
+<main>
+
+  <section id="panel-saved" class="panel is-on">
+    <p class="hint">Codes Clover will try at checkout.</p>
+    <div id="saved-list"></div>
+  </section>
+
+  <section id="panel-add" class="panel">
+    <p class="hint">Found a code that worked? Save it here.</p>
+    <label>Store
+      <input id="f-store" type="text" placeholder="nike.com" autocomplete="off">
+    </label>
+    <label>Code
+      <input id="f-code" type="text" placeholder="SUMMER20" autocomplete="off">
+    </label>
+    <label>What it does
+      <input id="f-note" type="text" placeholder="20% off, no minimum" autocomplete="off">
+    </label>
+    <button id="save-btn" class="primary">Save code</button>
+    <p class="status" id="status"></p>
+  </section>
+
+  <section id="panel-always" class="panel">
+    <p class="hint">Discount programs that stay open all year. No code hunting.</p>
+    <div id="evergreen-list"></div>
+  </section>
+
+</main>
+
+<footer>
+  <button class="footlink" id="openSettings">Settings</button>
+  <span class="footdot">·</span>
+  <span class="foottext">Clover leaves your referral links alone.</span>
+</footer>
+
+<script src="settings.js"></script>
+<script src="recipes.js"></script>
+<script src="popup.js"></script>
+</body>
+</html>
