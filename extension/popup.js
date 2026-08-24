@@ -165,20 +165,51 @@ function setVoted(v) {
   return new Promise((resolve) => api.storage.local.set({ cloverVoted: v }, resolve));
 }
 
-// honest status wording: >=3 votes shows a %, fewer shows a word
-function statusFor(works, fails) {
-  const total = works + fails;
-  if (total === 0) return { cls: "untested", text: "untested" };
-  const rate = works / total;
-  if (total >= 3) {
-    const pct = Math.round(rate * 100);
-    if (pct >= 60) return { cls: "worked", text: pct + "% work" };
-    if (pct >= 40) return { cls: "mixed", text: pct + "% work" };
-    return { cls: "low", text: pct + "% work" };
-  }
-  if (rate >= 0.6) return { cls: "high", text: "looks good" };
-  if (rate >= 0.4) return { cls: "mixed", text: "mixed" };
-  return { cls: "low", text: "iffy" };
+// ---- these mirror clover-site.html exactly, so the popup reads the same ----
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"]/g,
+    (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m]));
+}
+function rate(up, down) {
+  const t = up + down;
+  return t === 0 ? null : Math.round((up / t) * 100);
+}
+// with only one or two reports a precise percentage overstates what we know
+function rateLabel(up, down) {
+  const pct = rate(up, down);
+  if (pct === null) return "—";
+  const reports = up + down;
+  if (reports < 3) return pct >= 60 ? "high" : pct >= 40 ? "mixed" : "low";
+  return pct + "%";
+}
+function ring(pct, label) {
+  const R = 19, C = 2 * Math.PI * R;
+  const off = pct === null ? C : C - (pct / 100) * C;
+  const txt = label === undefined ? (pct === null ? "—" : pct + "%") : label;
+  const small = txt.length > 3 ? ' style="font-size:.58rem"' : "";
+  return `<div class="ring"><svg width="40" height="40" viewBox="0 0 44 44">` +
+    `<circle class="track" cx="22" cy="22" r="${R}" fill="none" stroke-width="4"/>` +
+    `<circle class="fill" cx="22" cy="22" r="${R}" fill="none" stroke-width="4" ` +
+    `stroke-dasharray="${C}" stroke-dashoffset="${off}"/></svg>` +
+    `<div class="num"${small}>${txt}</div></div>`;
+}
+// store marks are drawn here from the shop name — nothing is fetched
+const MARK_INK = ["#16382a", "#2e7d5b", "#34b26c", "#3f6d8a", "#6b4d99",
+                  "#8a6a05", "#a8552f", "#4a6b3a", "#7a4a5e", "#2f6d6d"];
+function markColour(name) {
+  let n = 0;
+  for (let i = 0; i < name.length; i++) n = (n * 31 + name.charCodeAt(i)) >>> 0;
+  return MARK_INK[n % MARK_INK.length];
+}
+function favicon(store) {
+  const clean = String(store || "?").replace(/^https?:\/\//, "").replace(/^www\./, "").split("/")[0];
+  const letter = (clean.replace(/[^a-z0-9]/gi, "")[0] || "?").toUpperCase();
+  const bg = markColour(clean);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">` +
+    `<rect width="32" height="32" rx="8" fill="${bg}"/>` +
+    `<text x="16" y="22" text-anchor="middle" fill="#ffffff" ` +
+    `font-family="Avenir Next,Segoe UI,Arial,sans-serif" font-size="18" font-weight="700">${letter}</text></svg>`;
+  return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
 }
 
 let COMMUNITY = [];
@@ -200,7 +231,13 @@ async function renderCommunity() {
     rows = (matched.length === 0 && !search) ? rows : matched;
   }
 
-  rows.sort((a, b) => ((b.works || 0) - (b.fails || 0)) - ((a.works || 0) - (a.fails || 0)));
+  // Same three tiers as the site: worked first, untested next, failing last.
+  const tier = (r) => { const pc = rate(r.works || 0, r.fails || 0); return pc === null ? 1 : (pc >= 50 ? 0 : 2); };
+  rows.sort((a, b) => {
+    const ta = tier(a), tb = tier(b);
+    if (ta !== tb) return ta - tb;
+    return (rate(b.works || 0, b.fails || 0) || 0) - (rate(a.works || 0, a.fails || 0) || 0);
+  });
 
   list.innerHTML = "";
   if (rows.length === 0) {
@@ -209,46 +246,60 @@ async function renderCommunity() {
   }
 
   rows.slice(0, 40).forEach((r) => {
-    const st = statusFor(r.works || 0, r.fails || 0);
+    const up = r.works || 0, down = r.fails || 0, reports = up + down;
+    const pct = rate(up, down);
     const mine = voted[r.id];
-    const row = document.createElement("div");
-    row.className = "crow" + (st.cls === "worked" ? " is-worked" : "");
-    row.innerHTML = `
-      <div class="crow-top">
-        <div>
-          <div class="crow-store"></div>
-          <div class="crow-note"></div>
-        </div>
-        <span class="cbadge ${st.cls}">${st.text}</span>
-      </div>
-      <div class="crow-mid">
-        <span class="crow-code"></span>
-        <div class="votes">
-          <button class="vote up ${mine === "up" ? "on" : ""}" ${mine ? "disabled" : ""} title="It worked">&#128077; <span class="v-up"></span></button>
-          <button class="vote down ${mine === "down" ? "on" : ""}" ${mine ? "disabled" : ""} title="Did not work">&#128078; <span class="v-down"></span></button>
-        </div>
-      </div>`;
-    row.querySelector(".crow-store").textContent = r.store || "";
-    row.querySelector(".crow-note").textContent = r.label || r.detail || "";
-    const codeEl = row.querySelector(".crow-code");
-    if (r.code) { codeEl.textContent = r.code; }
-    else { codeEl.className = "crow-deal"; codeEl.textContent = "deal / link"; }
-    row.querySelector(".v-up").textContent = r.works || 0;
-    row.querySelector(".v-down").textContent = r.fails || 0;
 
-    row.querySelectorAll(".vote").forEach((btn) => {
+    let okText = "";
+    if (reports === 0) okText = `<span class="untested">nobody has tried it yet</span>`;
+    else if (up > down) okText = `<span class="proof">people say it works</span>`;
+
+    const el = document.createElement("div");
+    el.className = "code";
+    el.innerHTML = `
+      <div class="score">${ring(pct, rateLabel(up, down))}<small>worked</small></div>
+      <img class="favicon" src="${favicon(r.store)}" alt="">
+      <div class="code-main">
+        <div class="code-top">
+          <span class="code-store">${esc(r.store)}</span>
+          ${r.code
+            ? `<span class="code-pill" title="Click to copy">${esc(r.code)}</span>`
+            : `<span class="code-deal">deal / link</span>`}
+        </div>
+        <div class="code-note">${esc(r.label || r.detail || "")}</div>
+        <div class="code-meta">
+          ${okText}
+          <span>${reports} ${reports === 1 ? "report" : "reports"}</span>
+        </div>
+      </div>
+      <div class="votes">
+        <button class="vote up${mine === "up" ? " chosen" : ""}" ${mine ? "disabled" : ""}
+          title="${mine === "up" ? "You said this worked" : "This code worked for me"}">Worked</button>
+        <button class="vote down${mine === "down" ? " chosen" : ""}" ${mine ? "disabled" : ""}
+          title="${mine === "down" ? "You said this failed" : "This code did not work"}">Nope</button>
+      </div>`;
+
+    const pill = el.querySelector(".code-pill");
+    if (pill) pill.onclick = () => {
+      navigator.clipboard && navigator.clipboard.writeText(r.code);
+      const old = pill.textContent;
+      pill.classList.add("copied"); pill.textContent = "copied";
+      setTimeout(() => { pill.textContent = old; pill.classList.remove("copied"); }, 1100);
+    };
+
+    el.querySelectorAll(".vote").forEach((btn) => {
       btn.addEventListener("click", async () => {
         if (voted[r.id]) return;
         const worked = btn.classList.contains("up");
         voted[r.id] = worked ? "up" : "down";
         await setVoted(voted);
-        if (worked) r.works = (r.works || 0) + 1; else r.fails = (r.fails || 0) + 1;
+        if (worked) r.works = up + 1; else r.fails = down + 1;
         cloudSend({ type: "clover_vote", id: r.id, worked });
         renderCommunity();
       });
     });
 
-    list.appendChild(row);
+    list.appendChild(el);
   });
 }
 

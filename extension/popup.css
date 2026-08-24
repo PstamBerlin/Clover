@@ -8,6 +8,9 @@
   --gold: #ffd24a;
   --muted: #61796d;
   --line: #d3ecdc;
+  --pine-soft: #1e4a37;
+  --spring-pale: #b6f5cd;
+  --coral: #ff7a6b;
 }
 
 * { box-sizing: border-box; }
@@ -293,50 +296,59 @@ footer{
   border-radius:6px;
 }
 
-/* ---------- community ---------- */
+/* ---------- community (exact clover-site.html card style) ---------- */
 .c-search{ margin-bottom:12px; }
 .ok-word{ color:var(--spring-deep); }
 
-.crow{
-  background:var(--paper);
-  border:1.5px solid var(--line);
-  border-radius:12px;
-  padding:10px 12px;
-  margin-bottom:8px;
-  animation:rise .3s backwards;
+.code{
+  display:flex;align-items:center;gap:11px;
+  background:var(--paper);border:2px solid var(--line);border-radius:15px;
+  padding:11px 12px;margin-bottom:10px;
+  animation:rise .32s backwards cubic-bezier(.2,.9,.3,1.2);
+  transition:border-color .2s,transform .2s,box-shadow .2s;
 }
-.crow.is-worked{ border-color:var(--spring); background:#f2fdf6; }
-.crow-top{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
-.crow-store{ font-weight:700; font-size:.84rem; }
-.crow-note{ font-size:.73rem; color:var(--muted); margin-top:2px; }
-.crow-mid{ display:flex; align-items:center; gap:8px; margin-top:8px; }
-.crow-code{
+.code:hover{ border-color:var(--spring);transform:translateY(-2px);box-shadow:0 8px 20px rgba(22,56,42,.09); }
+
+.score{flex-shrink:0;width:44px;text-align:center}
+.ring{position:relative;width:40px;height:40px;margin:0 auto 3px}
+.ring svg{transform:rotate(-90deg)}
+.ring .track{stroke:var(--line)}
+.ring .fill{stroke:var(--spring-deep);stroke-linecap:round;transition:stroke-dashoffset .7s cubic-bezier(.2,.9,.3,1)}
+.ring .num{position:absolute;inset:0;display:grid;place-items:center;font-size:.7rem;font-weight:700}
+.score small{font-size:.54rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+
+.favicon{ width:24px;height:24px;border-radius:6px;flex-shrink:0;background:var(--mist);border:1px solid var(--line);object-fit:contain; }
+
+.code-main{flex:1;min-width:0}
+.code-top{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:3px}
+.code-store{font-weight:700;font-size:.88rem}
+.code-pill{
   font-family:"SF Mono",Menlo,Consolas,monospace;
-  background:var(--pine); color:var(--spring);
-  padding:4px 9px; border-radius:7px; font-size:.76rem; white-space:nowrap;
+  background:var(--pine);color:var(--spring);
+  padding:3px 9px;border-radius:8px;font-size:.75rem;
+  cursor:pointer;transition:transform .18s,background .18s;user-select:all;white-space:nowrap;
 }
-.crow-deal{ font-size:.76rem; color:var(--muted); font-style:italic; }
+.code-pill:hover{background:var(--pine-soft);transform:scale(1.04)}
+.code-pill.copied{background:var(--spring);color:var(--pine)}
+.code-deal{font-size:.74rem;color:var(--muted);font-style:italic}
+.code-note{font-size:.77rem;color:var(--muted)}
+.code-meta{font-size:.65rem;color:#9ab0a3;margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.proof{color:var(--spring-deep);font-weight:700}
+.untested{ color:#8a7a4a;font-weight:700;background:#fff6dd;border:1px solid #f0e2b8;border-radius:5px;padding:1px 6px;font-size:.6rem; }
 
-.cbadge{
-  font-size:.68rem; font-weight:800; letter-spacing:.03em;
-  padding:3px 8px; border-radius:20px; white-space:nowrap;
-}
-.cbadge.worked{ background:var(--spring); color:var(--pine); }
-.cbadge.high{ background:#d8f6e4; color:var(--spring-deep); }
-.cbadge.mixed{ background:#fff2cc; color:#8a6d16; }
-.cbadge.low{ background:#fde2df; color:#c0392b; }
-.cbadge.untested{ background:#eef3ef; color:var(--muted); }
-
-.votes{ display:flex; gap:6px; margin-left:auto; }
+.votes{display:flex;flex-direction:column;gap:5px;flex-shrink:0}
 .vote{
-  border:1.5px solid var(--line); background:#fff; border-radius:8px;
-  padding:5px 9px; font:inherit; font-size:.8rem; cursor:pointer;
-  transition:transform .12s, background .12s, border-color .12s;
+  border:1.5px solid var(--line);background:var(--paper);border-radius:9px;
+  padding:5px 9px;font:inherit;font-size:.7rem;font-weight:600;
+  cursor:pointer;color:var(--muted);transition:all .18s;white-space:nowrap;
 }
-.vote:hover{ transform:translateY(-1px); }
-.vote.up.on{ background:var(--spring); border-color:var(--spring-deep); }
-.vote.down.on{ background:#fde2df; border-color:#c0392b; }
-.vote:disabled{ opacity:.5; cursor:default; transform:none; }
+.vote.up:hover{background:var(--spring-pale);border-color:var(--spring-deep);color:var(--pine)}
+.vote.down:hover{background:#ffe6e2;border-color:var(--coral);color:#a8382c}
+.vote:active{transform:scale(.92)}
+.vote.chosen.up{background:var(--spring);border-color:var(--spring-deep);color:var(--pine)}
+.vote.chosen.down{background:#ffd9d3;border-color:var(--coral);color:#a8382c}
+.vote.chosen::after{content:" \2713";font-size:.7rem;opacity:.7}
+.vote:disabled{cursor:default}
 
 /* ============================================================
    PHONES
