@@ -17,9 +17,69 @@
     return specific || window.CLOVER_RECIPES.find((r) => r.matches.includes("*"));
   }
 
+  // Search the page AND any open shadow roots. Modern checkouts (web
+  // components, some Shopify/headless carts) hide the promo box inside a
+  // shadow root, where a plain document.querySelectorAll can't see it.
+  function deepQueryAll(selector) {
+    const out = [];
+    const seen = new Set();
+    const walk = (root) => {
+      if (!root || seen.has(root)) return;
+      seen.add(root);
+      try { root.querySelectorAll(selector).forEach((el) => out.push(el)); } catch (e) { /* bad selector on this root */ }
+      let nodes;
+      try { nodes = root.querySelectorAll("*"); } catch (e) { nodes = []; }
+      nodes.forEach((el) => { if (el.shadowRoot) walk(el.shadowRoot); });
+    };
+    walk(document);
+    return out;
+  }
+
+  function isShown(el) {
+    return el.offsetParent !== null || el.getClientRects().length > 0;
+  }
+
+  // Strong promo words (safe to read from an input's own attributes/label).
+  const PROMO_STRONG = /(promo|coupon|discount|voucher|gutschein|rabatt|aktionscode|kortingscode|cupon|cupón|sconto|réduction|reduction|kortings|code)/i;
+  // Strict promo words (used when reading the surrounding box text, so a
+  // stray "code" or "zip code" elsewhere does not get mistaken for it).
+  const PROMO_STRICT = /(promo|coupon|discount|voucher|gutschein|rabatt|aktionscode|kortingscode|cupon|cupón|sconto)/i;
+
+  function labelTextFor(el) {
+    const bits = [];
+    const lid = el.getAttribute("aria-labelledby");
+    if (lid) lid.split(/\s+/).forEach((id) => { const l = document.getElementById(id); if (l) bits.push(l.textContent || ""); });
+    if (el.id) {
+      try { const lab = document.querySelector('label[for="' + (window.CSS && CSS.escape ? CSS.escape(el.id) : el.id) + '"]'); if (lab) bits.push(lab.textContent || ""); } catch (e) {}
+    }
+    const wrap = el.closest("label"); if (wrap) bits.push(wrap.textContent || "");
+    return bits.join(" ");
+  }
+
   function findCodeBox(recipe) {
-    const inputs = Array.from(document.querySelectorAll(recipe.codeInput));
-    return inputs.find((el) => el.offsetParent !== null) || null;
+    // 1) the recipe's attribute selectors, searching shadow roots too
+    let box = deepQueryAll(recipe.codeInput).find(isShown);
+    if (box) return box;
+
+    // 2) any visible text field whose own attributes or label say "promo"
+    const fields = deepQueryAll(
+      "input:not([type]), input[type='text'], input[type='search'], input[type='tel'], input[type='email']"
+    ).filter(isShown).filter((el) => (el.type || "").toLowerCase() !== "email" || true);
+
+    box = fields.find((el) => {
+      const own = [el.getAttribute("placeholder"), el.getAttribute("aria-label"),
+                   el.getAttribute("name"), el.id, labelTextFor(el)].join(" ");
+      return PROMO_STRONG.test(own);
+    });
+    if (box) return box;
+
+    // 3) a field whose small surrounding box reads like a promo field
+    //    (covers floating labels where the text is a sibling, not the input)
+    box = fields.find((el) => {
+      const near = (el.parentElement && el.parentElement.textContent || "");
+      return PROMO_STRICT.test(near);
+    });
+    return box || null;
   }
 
   function readTotal(recipe) {
