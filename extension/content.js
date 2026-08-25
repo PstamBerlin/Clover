@@ -82,6 +82,26 @@
     return box || null;
   }
 
+  // Many checkouts (Shopify etc.) hide the promo field behind an
+  // "Add discount code" / "Rabatt hinzufügen" toggle. If no box is visible,
+  // click that toggle first, then look again.
+  const REVEAL_WORDS = /(add (a )?discount|discount code|add (a )?code|enter (a )?code|promo code|coupon code|have a code|gift ?card|rabatt|gutschein|rabattcode|aktionscode|code hinzufügen|kortingscode|coupon|voucher|cupón|cupon|sconto|réduction)/i;
+  async function revealCodeBox(recipe) {
+    let box = findCodeBox(recipe);
+    if (box) return box;
+    const toggle = deepQueryAll("button, a, [role='button'], summary").find((el) => {
+      if (!isShown(el)) return false;
+      const t = (el.textContent || el.getAttribute("aria-label") || "").trim();
+      return t.length <= 40 && REVEAL_WORDS.test(t) && !PAY_WORDS.test(t);
+    });
+    if (toggle) {
+      try { toggle.click(); } catch (e) {}
+      await new Promise((r) => setTimeout(r, 450));
+      box = findCodeBox(recipe);
+    }
+    return box;
+  }
+
   function readTotal(recipe) {
     const els = Array.from(document.querySelectorAll(recipe.total));
     for (const el of els) {
@@ -511,7 +531,7 @@
 
   async function runCodes() {
     const recipe = pickRecipe();
-    const box = findCodeBox(recipe);
+    const box = await revealCodeBox(recipe);
 
     if (!box) {
       say("Cannot find the promo box", { kind: "miss", hold: 3000 });
