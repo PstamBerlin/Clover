@@ -249,6 +249,33 @@
   // Type the code and try hard to submit it: button → form submit → Enter,
   // and if the button looks disabled, still try the other routes then click
   // it anyway (some sites only grey it out with CSS).
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  // Taking an applied code back off, so the next one is measured from the full
+  // price. We ONLY ever click a remove button that names the code we applied
+  // (e.g. Shopify's "25Anycubic entfernen") — never a bare "Remove", so we can
+  // never accidentally delete a product line from the cart.
+  const REMOVE_WORDS = /(remove|entfernen|verwijder|supprimer|retirer|eliminar|quitar|rimuovi|rimuovere|togliere|löschen|delete|fjern|ta bort|poista|kaldır|удалить|убрать|删除|移除|削除|삭제)/i;
+  function findRemoveButton(code) {
+    if (!code) return null;
+    const up = code.toUpperCase();
+    return deepQueryAll("button, a, [role='button']").find((el) => {
+      if (!isShown(el)) return false;
+      if (el.closest && el.closest(".clover-badge")) return false;   // never our own UI
+      const t = (el.getAttribute("aria-label") || el.textContent || "").trim();
+      if (!t || t.length > 60 || PAY_WORDS.test(t)) return false;
+      return REMOVE_WORDS.test(t) && t.toUpperCase().includes(up);
+    });
+  }
+  async function removeCode(code) {
+    const b = findRemoveButton(code);
+    if (b) { try { b.click(); } catch (e) {} await sleep(650); return true; }
+    return false;
+  }
+  async function removeCodes(codes) {
+    for (const c of codes) await removeCode(c);
+  }
+
   async function applyCode(box, recipe, code) {
     setInputValue(box, code);
     // Frameworks like Shopify/React only ENABLE the Apply button after the
@@ -277,10 +304,11 @@
 
   const badge = document.createElement("div");
   badge.className = "clover-badge";
-  badge.innerHTML = `
-    <button class="clover-orb" aria-label="Open Clover">
+  // The mascot drawing, used twice: small in the floating orb, and big in
+  // the ring at the top of the open card.
+  const MASCOT = `
       <svg viewBox="0 0 100 100" class="clover-mark">
-        <g class="clover-body">
+        <g class="clover-figure">
           <path class="clover-stem" d="M50 63 Q47 79 39 91"
                 fill="none" stroke-width="4.5" stroke-linecap="round"/>
           <g class="clover-leaves">
@@ -308,14 +336,17 @@
                   stroke-width="2.4" stroke-linecap="round"/>
           </g>
         </g>
-      </svg>
-    </button>
+      </svg>`;
+
+  badge.innerHTML = `
+    <button class="clover-orb" aria-label="Open Clover">${MASCOT}</button>
     <div class="clover-say" hidden><span class="clover-say-text"></span></div>
-    <canvas class="clover-confetti" width="260" height="260"></canvas>
     <div class="clover-panel" hidden>
-      <div class="clover-panel-head">
+      <button class="clover-close" aria-label="Close">&times;</button>
+      <div class="clover-hero">
+        <div class="clover-ring">${MASCOT}</div>
+        <canvas class="clover-confetti" width="260" height="260"></canvas>
         <span class="clover-wordmark">Clover</span>
-        <button class="clover-close" aria-label="Close">&times;</button>
       </div>
       <div class="clover-body">
         <p class="clover-line">Looks like a checkout page.</p>
@@ -384,8 +415,9 @@
     const m = MOODS[mood];
     if (!m) return;
 
-    const mouth = badge.querySelector(".clover-mouth");
-    if (mouth) mouth.setAttribute("d", m.mouth);
+    badge.querySelectorAll(".clover-mouth").forEach((mouth) => {
+      mouth.setAttribute("d", m.mouth);
+    });
 
     badge.querySelectorAll(".clover-eye").forEach((eye) => {
       eye.setAttribute("r", m.eye);
@@ -560,11 +592,29 @@
     return true;
   }
 
+  // Roll a number up from 0 to `to` over ~0.7s, so the saving lands with a
+  // little flourish instead of just popping into place.
+  function countUp(el, to) {
+    if (!el) return;
+    const reduce = window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) { el.textContent = to.toFixed(2); return; }
+    const dur = 700, t0 = performance.now();
+    const tick = (t) => {
+      const p = Math.min(1, (t - t0) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);   // easeOutCubic — quick then settles
+      el.textContent = (to * eased).toFixed(2);
+      if (p < 1) requestAnimationFrame(tick);
+      else el.textContent = to.toFixed(2);
+    };
+    requestAnimationFrame(tick);
+  }
+
   // ---- the actual code-trying ----------------------------------------
 
   async function runCodes() {
     const recipe = pickRecipe();
-    const box = await revealCodeBox(recipe);
+    let box = await revealCodeBox(recipe);
 
     if (!box) {
       say("Cannot find the promo box", { kind: "miss", hold: 3000 });
@@ -608,49 +658,145 @@
     const currentEl = body.querySelector(".clover-current");
 
     const startTotal = readTotal(recipe);
-    let best = null;
 
+    // Wait for the store to recalculate — Shopify etc. update the total a beat
+    // after a code is applied. Poll until it drops below `below`, or give up.
+    const settle = async (below, tries) => {
+      let now = readTotal(recipe);
+      for (let w = 0; w < (tries || 8); w++) {
+        await sleep(450);
+        now = readTotal(recipe);
+        if (below != null && now != null && now < below - 0.001) break;
+      }
+      return now;
+    };
+
+    // After taking a code off, the store also needs a beat to put the price
+    // back UP. Wait for it, so the next code is not measured against a total
+    // that is still showing the discount we just removed.
+    const settleUp = async (target, tries) => {
+      let now = readTotal(recipe);
+      for (let w = 0; w < (tries || 8); w++) {
+        if (now != null && target != null && now >= target - 0.001) break;
+        await sleep(450);
+        now = readTotal(recipe);
+      }
+      return now;
+    };
+
+    // ---- Phase 1: try every code on its own, note how much each saves -----
+    const worked = [];   // { code, id, saved }
     for (let i = 0; i < list.length; i++) {
       const item = list[i];
       currentEl.textContent = `${item.code}  (${i + 1} of ${list.length})`;
       say(item.code, { kind: "code" });
 
       await applyCode(box, recipe, item.code);
-
-      // Stores (especially Shopify) recalculate the total a beat after the
-      // code is applied — poll for up to ~3.6s instead of checking once.
-      let now = null;
-      for (let w = 0; w < 8; w++) {
-        await new Promise((r) => setTimeout(r, 450));
-        now = readTotal(recipe);
-        if (startTotal && now != null && now < startTotal - 0.001) break;
-      }
+      const now = await settle(startTotal, 8);
 
       if (startTotal && now != null && now < startTotal - 0.001) {
-        best = { code: item.code, id: item.id, saved: startTotal - now };
-        break;   // it worked — keep this code applied, don't let the next one clear it
+        const saved = startTotal - now;
+        worked.push({ code: item.code, id: item.id, saved: saved });
+        statusEl.textContent = `Found one — saved ${saved.toFixed(2)}. Checking the rest…`;
+        say("Saved " + saved.toFixed(2), { kind: "win" });
+        // take it back off so the next code is measured from the full price
+        await removeCode(item.code);
+        await settleUp(startTotal);            // wait for the price to revert
+        box = (await revealCodeBox(recipe)) || box;
       }
     }
 
-    if (best) {
-      setMood("happy");
-      say("Saved " + best.saved.toFixed(2), { kind: "win", hold: 5000 });
-      burst(best.saved);
-      body.innerHTML = `
-        <p class="clover-line clover-win">Saved ${best.saved.toFixed(2)}</p>
-        <p class="clover-sub">Best code was <code>${best.code}</code>. It is applied now.</p>`;
-      body.classList.add("clover-celebrate");
-      // Tell the community this code worked, so it turns green for everyone.
-      if (best.id) cloudSend({ type: "clover_vote", id: best.id, worked: true });
-      setTimeout(() => setMood("idle"), 4000);
-    } else {
+    if (worked.length === 0) {
       setMood("sad");
       say("None of them worked", { kind: "miss", hold: 4000 });
       body.innerHTML = `
         <p class="clover-line">No code worked this time.</p>
         <p class="clover-sub">Tried ${list.length}. That is normal, most public codes are dead.</p>`;
       setTimeout(() => setMood("idle"), 3000);
+      return;
     }
+
+    // ---- Phase 2: keep the biggest, then try to STACK the others on top ----
+    worked.sort((a, b) => b.saved - a.saved);
+    statusEl.textContent = "Combining the best codes…";
+    currentEl.textContent = "";
+    await removeCodes(worked.map((w) => w.code));   // clean slate
+    await settleUp(startTotal);
+    box = (await revealCodeBox(recipe)) || box;
+
+    const stack = [];
+    let stackTotal = startTotal;
+    for (const w of worked) {
+      await applyCode(box, recipe, w.code);
+      const now = await settle(stackTotal, 8);
+      if (now != null && now < stackTotal - 0.001) {
+        // it lowered the price further → it stacks, keep it
+        stack.push(w);
+        stackTotal = now;
+        if (stack.length > 1) say("Stacked " + w.code, { kind: "win" });
+      } else {
+        // no extra saving (store took only one, or rejected it) → undo it
+        await removeCode(w.code);
+        await settleUp(stackTotal);
+        box = (await revealCodeBox(recipe)) || box;
+        // if undoing it wiped the whole stack (store swapped codes), rebuild
+        const check = readTotal(recipe);
+        if (stack.length && (check == null || check > stackTotal + 0.001)) {
+          await removeCodes(worked.map((x) => x.code));
+          await settleUp(startTotal);
+          box = (await revealCodeBox(recipe)) || box;
+          stackTotal = startTotal;
+          for (const s of stack) {
+            await applyCode(box, recipe, s.code);
+            const t = await settle(stackTotal, 8);
+            if (t != null) stackTotal = t;
+          }
+        }
+      }
+    }
+
+    // ---- make sure something good is REALLY on the order ----
+    // If Phase 2 somehow ended with nothing applied (e.g. the store cleared
+    // everything), fall back to just re-applying the single best code, so the
+    // number we celebrate always matches what is actually on the order.
+    let applied = stack.length ? stack.slice() : [];
+    let finalNow = readTotal(recipe);
+    if (!(startTotal && finalNow != null && finalNow < startTotal - 0.001)) {
+      await removeCodes(worked.map((w) => w.code));
+      await settleUp(startTotal);
+      box = (await revealCodeBox(recipe)) || box;
+      await applyCode(box, recipe, worked[0].code);
+      finalNow = await settle(startTotal, 10);
+      applied = [worked[0]];
+    }
+
+    const finalSaved = (startTotal && finalNow != null && finalNow < startTotal)
+      ? startTotal - finalNow
+      : worked[0].saved;
+
+    setMood("happy");
+    say("Saved " + finalSaved.toFixed(2), { kind: "win", hold: 5000 });
+    burst(finalSaved);
+
+    let sub;
+    if (applied.length > 1) {
+      sub = `Stacked ${applied.length} codes: ` +
+        applied.map((a) => `<code>${a.code}</code>`).join(" + ") + ".";
+    } else if (worked.length > 1) {
+      sub = `Best of ${worked.length} that worked. <code>${applied[0].code}</code> is applied now.`;
+    } else {
+      sub = `<code>${applied[0].code}</code> is applied now.`;
+    }
+    body.innerHTML = `
+      <p class="clover-savedlbl">You saved</p>
+      <p class="clover-win"><span class="clover-amt">0.00</span></p>
+      <p class="clover-sub">${sub}</p>`;
+    body.classList.add("clover-celebrate");
+    countUp(body.querySelector(".clover-amt"), finalSaved);
+
+    // Tell the community which codes worked, so they turn green for everyone.
+    applied.forEach((a) => { if (a.id) cloudSend({ type: "clover_vote", id: a.id, worked: true }); });
+    setTimeout(() => setMood("idle"), 4000);
   }
 
   // ---- only show up when it looks like a checkout ----------------------

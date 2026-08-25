@@ -65,17 +65,19 @@
 }
 
 /* the whole character leans slightly as it bobs, so it feels alive */
-.clover-body { transform-origin: 50px 60px; }
+.clover-figure { transform-origin: 50px 60px; }
 
-/* --- confetti canvas sits behind, ignores clicks --- */
+/* --- confetti canvas: centered over the big clover ring, ignores clicks --- */
 .clover-confetti{
   position: absolute;
-  right: -102px;
-  bottom: -102px;
+  left: 50%;
+  top: 76px;                 /* roughly the centre of the ring */
   width: 260px;
   height: 260px;
+  transform: translate(-50%, -50%);
   pointer-events: none;
   opacity: 0;
+  z-index: 4;
 }
 .clover-confetti.firing{ opacity: 1; }
 
@@ -83,7 +85,7 @@
 
 /* idle: blink, and a slow sway of the whole body */
 .mood-idle .clover-eye{ animation: clover-blink 5s infinite; }
-.mood-idle .clover-body{
+.mood-idle .clover-figure{
   padding: 16px 15px 14px;
 }
 @keyframes clover-blink{
@@ -98,7 +100,7 @@
 
 /* looking: eyes dart, body leans forward, faster bob */
 .mood-looking .clover-face{ animation: clover-scan .9s ease-in-out infinite; }
-.mood-looking .clover-body{ animation: clover-lean .9s ease-in-out infinite; }
+.mood-looking .clover-figure{ animation: clover-lean .9s ease-in-out infinite; }
 .mood-looking .clover-orb{
   width: 60px;
   height: 60px;
@@ -124,7 +126,7 @@
 /* happy: wide grin, a wiggle, two hops */
 .mood-happy .clover-mouth{ stroke-width: 3; }
 .mood-happy .clover-sheen{ opacity: .16; }
-.mood-happy .clover-body{ animation: clover-wiggle .5s ease-in-out 3; }
+.mood-happy .clover-figure{ animation: clover-wiggle .5s ease-in-out 3; }
 .mood-happy .clover-orb{ animation: clover-hop .6s cubic-bezier(.2,.9,.3,1.5) 2; }
 @keyframes clover-wiggle{
   0%, 100% { transform: rotate(-9deg); }
@@ -137,7 +139,7 @@
 }
 
 /* sad: droops over to one side and sinks */
-.mood-sad .clover-body{ animation: clover-droop .6s ease forwards; }
+.mood-sad .clover-figure{ animation: clover-droop .6s ease forwards; }
 .mood-sad .clover-orb{ animation: clover-slump .5s ease; }
 @keyframes clover-droop{
   0%   { transform: rotate(0) translateY(0); }
@@ -150,7 +152,7 @@
 }
 
 .clover-face{ transition: transform .2s; }
-.clover-body{ transition: transform .3s; }
+.clover-figure{ transition: transform .3s; }
 .clover-mouth, .clover-eye, .clover-glint{
   transition: r .25s ease, stroke-width .25s ease;
 }
@@ -184,12 +186,25 @@
 }
 
 /* --- win state --- */
+.clover-savedlbl{
+  margin: 2px 0 0;
+  text-align: center;
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #4f7a63;
+}
 .clover-win {
-  font-size: 1.5rem;
+  margin: 0 0 2px;
+  text-align: center;
+  font-size: 2.15rem;
+  font-weight: 800;
+  line-height: 1.05;
   color: var(--spring-deep);
   animation: clover-punch .5s cubic-bezier(.2,.9,.3,1.6);
 }
-.clover-win::before { content: "+"; }
+.clover-win .clover-amt::before { content: "+"; margin-right: 1px; }
 @keyframes clover-punch {
   0%   { transform: scale(.4); opacity: 0; }
   60%  { transform: scale(1.14); opacity: 1; }
@@ -221,7 +236,7 @@
 
 /* mascot off: hide the face, keep the clover */
 .clover-badge.clover-plain .clover-face{ display: none; }
-.clover-badge.clover-plain .clover-body{ animation: none !important; }
+.clover-badge.clover-plain .clover-figure{ animation: none !important; }
 
 /* dark theme for the panel */
 /* base panel — SOLID so the text is always readable over a busy checkout
@@ -244,14 +259,106 @@
   background: #16382a;
   color: #d7f5e2;
 }
-.clover-panel .clover-body{ background: #fffdf8; }
+.clover-panel .clover-body{ background: #fffdf8; text-align: center; }
 .clover-panel .clover-line{ color: #16382a; }
 .clover-panel .clover-sub{ color: #3a5a4a; }
 .clover-panel .clover-foot{ color: #5a7a6a; }
 
+/* --- big clover ring: the centrepiece at the top of the open card --- */
+.clover-hero{
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 16px 8px;
+  background: #fffdf8;
+}
+.clover-ring{
+  position: relative;
+  z-index: 2;
+  width: 116px;
+  height: 116px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 38% 30%, #eafaf0, #d6f2df 68%, #c2ead0);
+  border: 3px solid #16382a;
+  box-shadow: 0 4px 0 rgba(22,56,42,.9), inset 0 2px 7px rgba(255,255,255,.65);
+}
+.clover-ring .clover-mark{ width: 78px; height: 78px; }
+.clover-wordmark{
+  margin-top: 9px;
+  font-weight: 800;
+  font-size: .78rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: #2f7d52;
+}
+.clover-close{
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  z-index: 6;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #6a8a78;
+  font-size: 20px;
+  line-height: 24px;
+  cursor: pointer;
+  border-radius: 8px;
+}
+.clover-close:hover{ background: rgba(22,56,42,.08); color: #16382a; }
+
+/* dark-mode versions of the ring + chrome */
+.clover-badge.clover-dark .clover-hero{ background: #0d211a; }
+.clover-badge.clover-dark .clover-panel .clover-body{ background: #0d211a; }
+/* the big ring sits on a dark bg, so give its clover a brighter fill */
+.clover-badge.clover-dark .clover-ring .clover-leaves{ fill: #45c583; }
+.clover-badge.clover-dark .clover-ring .clover-stem{ stroke: #45c583; }
+.clover-badge.clover-dark .clover-ring .clover-mouth{ stroke: #06130d; }
+.clover-badge.clover-dark .clover-ring{
+  background: radial-gradient(circle at 38% 30%, #163a2b, #0f2a20 70%);
+  border-color: #7fe3a0;
+  box-shadow: 0 4px 0 rgba(0,0,0,.5), inset 0 2px 7px rgba(127,227,160,.18);
+}
+.clover-badge.clover-dark .clover-wordmark{ color: #7fe3a0; }
+.clover-badge.clover-dark .clover-savedlbl{ color: #92b3a2; }
+.clover-badge.clover-dark .clover-win{ color: #9df3bd; }
+.clover-badge.clover-dark .clover-close{ color: #92b3a2; }
+.clover-badge.clover-dark .clover-close:hover{ background: rgba(255,255,255,.08); color: #d8fbe5; }
+
+/* --- the Try codes button (and the "back to trying" one) --- */
+.clover-go{
+  display: block;
+  width: 100%;
+  margin: 13px 0 2px;
+  padding: 12px 14px;
+  border: 2px solid #16382a;
+  border-radius: 13px;
+  background: #34b26c;
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  font-size: 1rem;
+  cursor: pointer;
+  box-shadow: 0 3px 0 rgba(22,56,42,.9);
+  transition: transform .12s, box-shadow .12s, background .15s;
+}
+.clover-go:hover{ background: #2f9e5f; }
+.clover-go:active{ transform: translateY(2px); box-shadow: 0 1px 0 rgba(22,56,42,.9); }
+.clover-badge.clover-dark .clover-go{
+  background: #3ecb7d; color: #06130d;
+  border-color: #7fe3a0; box-shadow: 0 3px 0 rgba(0,0,0,.5);
+}
+.clover-badge.clover-dark .clover-go:hover{ background: #4ed98b; }
+
 .clover-badge.clover-dark .clover-panel{
   width: 296px;
-  background: var(--paper, #fffdf8);
+  background: #0d211a;
   border: 2px solid var(--pine);
   border-radius: 18px;
   overflow: hidden;
@@ -404,10 +511,8 @@
 
   /* confetti scaled down so it does not paint off screen */
   .clover-confetti {
-    right: -60px;
-    bottom: -60px;
-    width: 190px;
-    height: 190px;
+    width: 210px;
+    height: 210px;
   }
 }
 
@@ -430,7 +535,7 @@
    GPU-accelerate the moving parts, add a gentle idle float, and
    soften the celebration + panel entrance so everything glides.
    ============================================================ */
-.clover-orb, .clover-body, .clover-say, .clover-panel, .clover-confetti {
+.clover-orb, .clover-figure, .clover-say, .clover-panel, .clover-confetti {
   will-change: transform, opacity;
   backface-visibility: hidden;
   -webkit-font-smoothing: antialiased;
