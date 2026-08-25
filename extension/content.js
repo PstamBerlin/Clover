@@ -147,7 +147,12 @@
   // Uses Unicode-letter boundaries (not \b) so German words that start/end
   // with ä/ö/ü/ß match too, and so it never fires on a partial word.
   // Kept specific so it never clicks "Pay", "Remove" or "Add to cart".
-  const APPLY_WORDS = /(?:^|[^\p{L}])(apply|redeem|apply code|add code|use code|einlösen|einlosen|anwenden|übernehmen|ubernehmen|einreichen|aktivieren|hinzufügen|hinzufugen|appliquer|valider|canjear|aplicar|applica|riscatta|toepassen|inwisselen|activeren|zastosuj|primeni)(?:[^\p{L}]|$)/iu;
+  // Words on a button that mean "apply the discount", across many languages.
+  // Only promo/redeem meanings — never generic submit words.
+  const APPLY_WORDS = /(?:^|[^\p{L}])(apply|redeem|activate|apply code|add code|use code|apply discount|apply coupon|einlösen|einlosen|anwenden|übernehmen|ubernehmen|einreichen|aktivieren|hinzufügen|hinzufugen|gutschein|appliquer|valider|utiliser|canjear|aplicar|aplicar cupón|resgatar|aplică|folosește|applica|riscatta|usa|toepassen|inwisselen|activeren|verzilver|tillämpa|lös in|løs inn|indløs|anvend|bruk|käytä|lunasta|uygula|kullan|zastosuj|wykorzystaj|uplatnit|použít|alkalmaz|beváltás|применить|использовать|активировать|застосувати|εφαρμογή|εξαργύρωση|תطبيق|החל|使用|应用|兑换|適用|適用する|적용|사용)(?:[^\p{L}]|$)/iu;
+
+  // Words we must NEVER click as "apply" — pay / buy / place-order buttons.
+  const PAY_WORDS = /(pay|buy|order|checkout|purchase|place order|complete|continue|proceed|kaufen|bezahlen|jetzt kaufen|zur kasse|bestellen|bestellung|weiter|payer|commander|payez|comprar|pagar|finalizar|realizar pedido|acquista|paga|ordina|betalen|afrekenen|bestellen|köp|betala|betal|kjøp|osta|maksa|ödeme|satın|sipariş|оплатить|купить|заказать|оформить|结账|付款|购买|支付|下单|結帳|決済|購入|支払|チェックアウト|결제|구매|주문)/iu;
 
   function findApplyButton(recipe, box) {
     // 1) the store recipe's own selector, if it points at something visible
@@ -169,15 +174,21 @@
     scope = scope || document;
     const cands = Array.from(scope.querySelectorAll(
       "button, input[type='submit'], input[type='button'], [role='button'], a"));
-    const hit = cands.find((el) =>
-      el !== box && el.offsetParent !== null &&
-      APPLY_WORDS.test((el.textContent || el.value || el.getAttribute("aria-label") || "")));
+    const hit = cands.find((el) => {
+      if (el === box || el.offsetParent === null) return false;
+      const t = (el.textContent || el.value || el.getAttribute("aria-label") || "");
+      // must read like "apply", and must NOT read like pay/buy/checkout
+      return APPLY_WORDS.test(t) && !PAY_WORDS.test(t);
+    });
     if (hit) return hit;
-    // 3) a lone submit button inside the same little form
+    // 3) a lone submit button inside the same little form — but never one
+    //    that reads like pay / place order
     if (box && box.form) {
-      const sub = box.form.querySelector(
-        "button[type='submit'], input[type='submit'], button:not([type])");
-      if (sub && sub.offsetParent !== null) return sub;
+      const subs = Array.from(box.form.querySelectorAll(
+        "button[type='submit'], input[type='submit'], button:not([type])"));
+      const sub = subs.find((s) => s.offsetParent !== null &&
+        !PAY_WORDS.test(s.textContent || s.value || s.getAttribute("aria-label") || ""));
+      if (sub) return sub;
     }
     return null;
   }
@@ -185,17 +196,28 @@
   // Type the code and try hard to submit it: button → form submit → Enter,
   // and if the button looks disabled, still try the other routes then click
   // it anyway (some sites only grey it out with CSS).
-  function applyCode(box, recipe, code) {
+  async function applyCode(box, recipe, code) {
     setInputValue(box, code);
-    const btn = findApplyButton(recipe, box);
-    const usable = btn && !btn.disabled && btn.getAttribute("aria-disabled") !== "true";
-    if (usable) { btn.click(); return; }
-    if (box.form && box.form.requestSubmit) { try { box.form.requestSubmit(); } catch (e) {} }
-    ["keydown", "keyup"].forEach((type) =>
-      box.dispatchEvent(new KeyboardEvent(type, {
-        key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true
-      })));
-    if (btn) { try { btn.click(); } catch (e) {} }
+    // Frameworks like Shopify/React only ENABLE the Apply button after the
+    // input re-renders, so wait a beat before looking for a clickable button.
+    await new Promise((r) => setTimeout(r, 350));
+
+    const btn = findApplyButton(recipe, box);   // already excludes pay/buy buttons
+    if (btn && !btn.disabled && btn.getAttribute("aria-disabled") !== "true") { btn.click(); return; }
+
+    // SAFETY: never submit a form that contains a pay / place-order button —
+    // pressing Enter or submitting there could place a real order. Only fall
+    // back to Enter when the field sits in a dedicated discount form.
+    const form = box.form;
+    const formHasPay = form && Array.from(form.querySelectorAll("button, input[type='submit']"))
+      .some((b) => PAY_WORDS.test(b.textContent || b.value || b.getAttribute("aria-label") || ""));
+    if (!formHasPay) {
+      ["keydown", "keyup"].forEach((type) =>
+        box.dispatchEvent(new KeyboardEvent(type, {
+          key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true
+        })));
+      if (btn) { try { btn.click(); } catch (e) {} }  // click even if only CSS-greyed
+    }
   }
 
   // ---- badge ----------------------------------------------------------

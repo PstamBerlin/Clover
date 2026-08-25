@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Clover",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Finds and tries coupon codes at checkout. No affiliate link swapping, ever.",
   "browser_specific_settings": {
     "gecko": {

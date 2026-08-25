@@ -224,6 +224,31 @@
 .clover-badge.clover-plain .clover-body{ animation: none !important; }
 
 /* dark theme for the panel */
+/* base panel — SOLID so the text is always readable over a busy checkout
+   (previously only dark mode set a background, so the light panel was see-through) */
+.clover-panel{
+  width: 296px;
+  background: #fffdf8;
+  color: #16382a;
+  border: 2px solid #16382a;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 4px 0 rgba(22,56,42,.9), 0 18px 40px rgba(22,56,42,.28);
+  margin-bottom: 14px;
+}
+.clover-panel-head{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 15px;
+  background: #16382a;
+  color: #d7f5e2;
+}
+.clover-panel .clover-body{ background: #fffdf8; }
+.clover-panel .clover-line{ color: #16382a; }
+.clover-panel .clover-sub{ color: #3a5a4a; }
+.clover-panel .clover-foot{ color: #5a7a6a; }
+
 .clover-badge.clover-dark .clover-panel{
   width: 296px;
   background: var(--paper, #fffdf8);
