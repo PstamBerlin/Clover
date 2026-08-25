@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Clover",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "Finds and tries coupon codes at checkout. No affiliate link swapping, ever.",
   "permissions": [
     "storage",

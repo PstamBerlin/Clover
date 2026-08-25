@@ -424,3 +424,47 @@
   .clover-panel { width: 300px; max-height: 78vh; overflow-y: auto; }
   .clover-orb { width: 44px; height: 44px; }
 }
+
+/* ============================================================
+   SMOOTHNESS POLISH
+   GPU-accelerate the moving parts, add a gentle idle float, and
+   soften the celebration + panel entrance so everything glides.
+   ============================================================ */
+.clover-orb, .clover-body, .clover-say, .clover-panel, .clover-confetti {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* the orb breathes gently while idle, and pauses when hovered/opened */
+.mood-idle .clover-orb { animation: clover-float 3.4s ease-in-out infinite; }
+.clover-orb:hover,
+.clover-badge.is-open .clover-orb { animation-play-state: paused; }
+@keyframes clover-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+
+/* softer, springier celebration hop (replaces the sharper one) */
+.mood-happy .clover-orb { animation: clover-hop2 .72s cubic-bezier(.34,1.4,.5,1) 2; }
+@keyframes clover-hop2 {
+  0%, 100% { transform: translateY(0) scale(1); }
+  38%      { transform: translateY(-11px) scale(1.08); }
+  68%      { transform: translateY(0) scale(.97); }
+}
+
+/* smooth panel open */
+.clover-panel { animation: clover-panel-in .3s cubic-bezier(.2,.8,.3,1.05) both; }
+@keyframes clover-panel-in {
+  from { opacity: 0; transform: translateY(10px) scale(.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* nicer easing on the hover/press of the orb */
+.clover-orb { transition: transform .2s cubic-bezier(.2,.9,.3,1.3); }
+
+@media (prefers-reduced-motion: reduce) {
+  .mood-idle .clover-orb, .mood-happy .clover-orb, .clover-panel {
+    animation: none !important;
+  }
+}

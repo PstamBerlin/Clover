@@ -102,12 +102,45 @@
     return box;
   }
 
-  function readTotal(recipe) {
-    const els = Array.from(document.querySelectorAll(recipe.total));
-    for (const el of els) {
-      const match = (el.textContent || "").match(/[\d]+[.,][\d]{2}/);
-      if (match) return parseFloat(match[0].replace(",", "."));
+  // Parse a money string in either 1.234,56 (EU) or 1,234.56 (US) format.
+  function parseMoney(s) {
+    const m = (s || "").match(/\d[\d.,\s]*\d|\d/);
+    if (!m) return null;
+    let x = m[0].replace(/\s/g, "");
+    const dec = Math.max(x.lastIndexOf(","), x.lastIndexOf("."));
+    if (dec > -1 && x.length - dec - 1 === 2) {
+      x = x.slice(0, dec).replace(/[.,]/g, "") + "." + x.slice(dec + 1);
+    } else {
+      x = x.replace(/[.,]/g, "");
     }
+    const n = parseFloat(x);
+    return isNaN(n) ? null : Math.abs(n);
+  }
+
+  const TOTAL_LABEL = /^(gesamt|total|zu zahlen|order total|grand total|amount due|to pay|à payer|итого|totaal|totale|合计|總計|합계|결제)\b/i;
+  const NOT_TOTAL = /(erspar|rabatt|saving|discount|nachlass|reduction|zwischensumme|subtotal|versand|shipping|steuer|\btax\b|mwst|vat|trinkgeld|\btip\b)/i;
+
+  // Read the GRAND total. Stores split the "Gesamt/Total" label and the price
+  // into separate elements, so find the label, then the price in its row.
+  function readTotal(recipe) {
+    const labels = deepQueryAll("*").filter((el) => {
+      if (!isShown(el)) return false;
+      const own = Array.from(el.childNodes).filter((n) => n.nodeType === 3)
+        .map((n) => n.textContent).join(" ").trim();
+      return own && own.length <= 24 && TOTAL_LABEL.test(own) && !NOT_TOTAL.test(own);
+    });
+    for (const lab of labels) {
+      let row = lab;
+      for (let k = 0; k < 5 && row; k++) {
+        const t = row.textContent || "";
+        if (/\d[.,]\d{2}/.test(t)) {
+          const v = parseMoney(t.replace(/gesamtersparnis[^\d]*[\d.,]+/i, ""));
+          if (v != null) return v;
+        }
+        row = row.parentElement;
+      }
+    }
+    for (const el of deepQueryAll(recipe.total)) { const v = parseMoney(el.textContent); if (v != null) return v; }
     return null;
   }
 
@@ -582,14 +615,20 @@
       currentEl.textContent = `${item.code}  (${i + 1} of ${list.length})`;
       say(item.code, { kind: "code" });
 
-      applyCode(box, recipe, item.code);
+      await applyCode(box, recipe, item.code);
 
-      await new Promise((r) => setTimeout(r, S.delay || 1400));
+      // Stores (especially Shopify) recalculate the total a beat after the
+      // code is applied — poll for up to ~3.6s instead of checking once.
+      let now = null;
+      for (let w = 0; w < 8; w++) {
+        await new Promise((r) => setTimeout(r, 450));
+        now = readTotal(recipe);
+        if (startTotal && now != null && now < startTotal - 0.001) break;
+      }
 
-      const now = readTotal(recipe);
-      if (startTotal && now && now < startTotal) {
-        const saved = startTotal - now;
-        if (!best || saved > best.saved) best = { code: item.code, id: item.id, saved };
+      if (startTotal && now != null && now < startTotal - 0.001) {
+        best = { code: item.code, id: item.id, saved: startTotal - now };
+        break;   // it worked — keep this code applied, don't let the next one clear it
       }
     }
 
