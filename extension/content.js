@@ -650,12 +650,31 @@
     setMood("looking");
     say("Trying " + list.length + " codes");
     body.innerHTML = `
-      <div class="clover-spinner"><span></span><span></span><span></span><span></span></div>
-      <p class="clover-line clover-status">Trying codes...</p>
-      <p class="clover-sub clover-current"></p>`;
+      <p class="clover-line clover-status">Trying codes…</p>
+      <div class="clover-progress"><div class="clover-progress-bar"></div></div>
+      <div class="clover-current-pill"></div>
+      <p class="clover-sub clover-tally"></p>`;
 
     const statusEl = body.querySelector(".clover-status");
-    const currentEl = body.querySelector(".clover-current");
+    const barEl    = body.querySelector(".clover-progress-bar");
+    const pillEl   = body.querySelector(".clover-current-pill");
+    const tallyEl  = body.querySelector(".clover-tally");
+    const ring     = badge.querySelector(".clover-ring");
+
+    // Show the code Clover is on right now, pop the pill, nudge the bar, and
+    // make the big clover "peek" at it — so you can watch it work its way down
+    // the list instead of staring at a spinner.
+    let foundCount = 0;
+    function peekAt(code, i, total) {
+      if (pillEl) {
+        pillEl.textContent = code;
+        pillEl.classList.remove("pop"); void pillEl.offsetWidth; pillEl.classList.add("pop");
+      }
+      if (ring) {
+        ring.classList.remove("peek"); void ring.offsetWidth; ring.classList.add("peek");
+      }
+      if (barEl && total) barEl.style.width = Math.round(((i + 1) / total) * 100) + "%";
+    }
 
     const startTotal = readTotal(recipe);
 
@@ -688,7 +707,8 @@
     const worked = [];   // { code, id, saved }
     for (let i = 0; i < list.length; i++) {
       const item = list[i];
-      currentEl.textContent = `${item.code}  (${i + 1} of ${list.length})`;
+      statusEl.textContent = `Trying code ${i + 1} of ${list.length}…`;
+      peekAt(item.code, i, list.length);
       say(item.code, { kind: "code" });
 
       await applyCode(box, recipe, item.code);
@@ -697,7 +717,10 @@
       if (startTotal && now != null && now < startTotal - 0.001) {
         const saved = startTotal - now;
         worked.push({ code: item.code, id: item.id, saved: saved });
-        statusEl.textContent = `Found one — saved ${saved.toFixed(2)}. Checking the rest…`;
+        foundCount++;
+        tallyEl.textContent = foundCount === 1
+          ? "Found 1 that works so far ✓"
+          : `Found ${foundCount} that work so far ✓`;
         say("Saved " + saved.toFixed(2), { kind: "win" });
         // take it back off so the next code is measured from the full price
         await removeCode(item.code);
@@ -718,8 +741,10 @@
 
     // ---- Phase 2: keep the biggest, then try to STACK the others on top ----
     worked.sort((a, b) => b.saved - a.saved);
-    statusEl.textContent = "Combining the best codes…";
-    currentEl.textContent = "";
+    statusEl.textContent = worked.length > 1
+      ? "Combining the best codes…" : "Locking in the best code…";
+    tallyEl.textContent = "";
+    if (barEl) barEl.style.width = "100%";
     await removeCodes(worked.map((w) => w.code));   // clean slate
     await settleUp(startTotal);
     box = (await revealCodeBox(recipe)) || box;
@@ -727,6 +752,7 @@
     const stack = [];
     let stackTotal = startTotal;
     for (const w of worked) {
+      peekAt(w.code, worked.length - 1, worked.length);
       await applyCode(box, recipe, w.code);
       const now = await settle(stackTotal, 8);
       if (now != null && now < stackTotal - 0.001) {
