@@ -10,7 +10,8 @@ alter table public.codes
   add column if not exists checker_result text,   -- 'ok', 'fail' or 'blocked'
   add column if not exists checker_note text;     -- e.g. 'anycubic.com cart with Kobra 3 Max (2229.79): saved 15.0'
 
-create or replace view public.code_stats as
+drop view if exists public.code_stats;   -- the old view counted with another number type; replace in place is refused
+create view public.code_stats as
 select c.id, c.store, c.code, c.label, c.detail, c.pct, c.kind, c.value, c.created_at,
        count(*) filter (where v.worked is true)  as works,
        count(*) filter (where v.worked is false) as fails,
