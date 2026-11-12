@@ -120,6 +120,16 @@ function renderEvergreen() {
 renderSaved();
 renderEvergreen();
 
+// the theme from the settings page: auto follows the system
+(async () => {
+  try {
+    const S = await getSettings();
+    const dark = S.theme === "dark" ||
+      (S.theme === "auto" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    document.body.classList.toggle("dark", dark);
+  } catch (e) {}
+})();
+
 // ---------- settings link ----------
 const settingsBtn = document.getElementById("openSettings");
 if (settingsBtn) {
