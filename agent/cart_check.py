@@ -28,6 +28,7 @@ UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML,
 FIELD = 'input[name="reductions"], input[name="discount"], input[id^="ReductionsInput"], input[placeholder*="iscount" i], input[placeholder*="abatt" i], input[placeholder*="gift card" i]'
 ERR = re.compile(r"(enter a valid|invalid|not valid|isn.t valid|unrecognised|unrecognized|incorrect|expired|no longer valid|can.t be applied|cannot be applied|not applicable|doesn.t apply|does not apply|ungültig|gib einen gültigen|abgelaufen|ongeldig|invalide|inválido|scaduto)", re.I)
 SHOP_TROUBLE = re.compile(r"(problem with our checkout|try again in a few minutes|too many requests|rate limit)", re.I)
+NO_CODES = re.compile(r"(no code needed|automatically applied|codes? (?:are|is) not accepted|does not accept (?:discount|promo) codes)", re.I)
 
 def shared_codes():
     req = urllib.request.Request(SUPA + "/code_stats?select=id,store,code,works,fails", headers={"apikey": ANON, "Authorization": "Bearer " + ANON})
@@ -90,6 +91,11 @@ async def check_store(ctx, name, base, codes):
             res["note"] = "no discount field"; return res
         start = await total_value(pg)
         res["start_total"] = start
+        res["product"] = (v.get("title") or "")[:60]
+        ph = ((await field.get_attribute("placeholder")) or "").strip()
+        res["field_placeholder"] = ph
+        if re.fullmatch(r"gift ?card", ph, re.I) and not re.search(r"discount|code", ph, re.I):
+            res["note"] = "the checkout only takes gift cards, no discount codes"; return res
         if start is None:
             res["note"] = "no total found"; return res
         for code in codes[:MAX_CODES]:
@@ -115,12 +121,16 @@ async def check_store(ctx, name, base, codes):
                 near = await pg.evaluate("""() => { const f = document.querySelector('input[name="reductions"], input[name="discount"], input[id^="ReductionsInput"]'); let el = f && f.parentElement; let t=''; for (let i=0;i<4 && el;i++){ t += ' ' + (el.innerText||''); el = el.parentElement; } return t.slice(0, 600); }""")
                 if ERR.search(near or ""):
                     outcome, seen = "fail", (ERR.search(near).group(0)); break
+                if NO_CODES.search(near or ""):
+                    outcome, seen = "unknown", "the shop takes no codes here"; break
                 if SHOP_TROUBLE.search(await pg.evaluate("document.body.innerText.slice(0, 4000)")):
                     outcome, seen = "unknown", "the shop had a problem with its checkout"; break
             res["results"].append({"code": code, "result": outcome, "saving": saving, "shop_said": seen})
             print(f"  {name:16s} {code:18s} {outcome:8s} {saving if saving else ''} {seen}")
             if seen == "the shop had a problem with its checkout":
                 res["note"] = "stopped: the shop reported a checkout problem"; break
+            if seen == "the shop takes no codes here":
+                res["note"] = "the checkout takes no discount codes (an offer is applied automatically)"; res["results"] = []; break
             if outcome == "ok":
                 # take it off again: the remove button names the code
                 for btn in await pg.query_selector_all("button, a"):

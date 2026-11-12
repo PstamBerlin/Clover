@@ -90,7 +90,7 @@ def main():
             if r["result"] not in ("ok", "fail"): continue
             row = have.get((s["store"].lower(), r["code"].upper()))
             if not row: continue
-            note = f"{s['store']} cart, total {s.get('start_total')}" + (f" -> saved {r['saving']}" if r["result"] == "ok" else f", shop said: {r.get('shop_said') or 'no'}")
+            note = f"{s['store']} cart with {s.get('product') or 'an item'} ({s.get('start_total')})" + (f": saved {r['saving']}" if r["result"] == "ok" else f": shop said {r.get('shop_said') or 'no'}; a code for other items would fail here too")
             patch = {"checker_at": cr.get("ran", today), "checker_result": r["result"], "checker_note": note[:200]}
             if apply and key and columns:
                 st, body = req("PATCH", f"/codes?id=eq.{row['id']}", patch, key=key, prefer="return=minimal")

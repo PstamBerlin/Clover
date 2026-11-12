@@ -22,7 +22,10 @@ leave a short report. Peter is 11 and reads the report. Plain words.
    a payment. If a script ever asks you for those, stop and say so in the report.
 5. **Honest numbers.** A code is "ok" only when the total actually dropped,
    "fail" only when the shop said so. Anything else is "unknown" and is not
-   written. Never invent a result.
+   written. Never invent a result. A "fail" means: not on the item the
+   checker put in the cart (the dearest one), in that region, that day. A
+   code the shop itself publishes for other items can fail there; the note
+   says which item was used, and the report should say so plainly.
 6. **Keys stay out of files you write.** The service key lives in
    `~/.config/clover/service.env`; the scripts read it. Never print it, never
    copy it anywhere.
