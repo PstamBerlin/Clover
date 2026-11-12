@@ -12,9 +12,10 @@ agent/out/cart_results.json (what happened in the carts).
   sentence it was found in. Pass --candidates-ok CODE,CODE to say which
   candidates the agent judged to be real codes; without it nothing is added.
 - A cart result sets checker_at / checker_result / checker_note on the code.
-  That needs the service key, which lives ONLY on Peter's Mac in
-  ~/.config/clover/service.env as CLOVER_SERVICE_KEY=... (never in this repo).
-  Without it the results are printed and nothing is written.
+  The public key may update exactly those three columns (agent/supabase.sql
+  grants that column by column), so no secret key is needed. If a
+  ~/.config/clover/service.env with CLOVER_SERVICE_KEY=... exists it is used
+  instead, but nothing requires it.
 
 The checker's result never turns a code green on the site: a person's vote is
 the only thing that does. The site shows it as "Clover's checker ran this".
@@ -92,13 +93,12 @@ def main():
             if not row: continue
             note = f"{s['store']} cart with {s.get('product') or 'an item'} ({s.get('start_total')})" + (f": saved {r['saving']}" if r["result"] == "ok" else f": shop said {r.get('shop_said') or 'no'}; a code for other items would fail here too")
             patch = {"checker_at": cr.get("ran", today), "checker_result": r["result"], "checker_note": note[:200]}
-            if apply and key and columns:
-                st, body = req("PATCH", f"/codes?id=eq.{row['id']}", patch, key=key, prefer="return=minimal")
-                writes.append((s["store"], r["code"], r["result"], st))
+            if apply and columns:
+                st, body = req("PATCH", f"/codes?id=eq.{row['id']}", patch, key=key or ANON, prefer="return=minimal")
+                writes.append((s["store"], r["code"], r["result"], st if st in (200, 204) else f"{st} {body}"))
             else:
-                writes.append((s["store"], r["code"], r["result"], "would write" if (key and columns) else ("no checker columns yet" if not columns else "no service key, not written")))
+                writes.append((s["store"], r["code"], r["result"], "would write" if columns else "no checker columns yet"))
     for w in writes: print("checker:", w)
-    if not key: print("note: ~/.config/clover/service.env has no CLOVER_SERVICE_KEY, so checker results stay local")
     print(f"{'applied' if apply else 'dry run'}: {len(added)} to add, {len(writes)} checker results")
 
 if __name__ == "__main__":

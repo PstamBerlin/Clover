@@ -26,9 +26,8 @@ leave a short report. Peter is 11 and reads the report. Plain words.
    checker put in the cart (the dearest one), in that region, that day. A
    code the shop itself publishes for other items can fail there; the note
    says which item was used, and the report should say so plainly.
-6. **Keys stay out of files you write.** The service key lives in
-   `~/.config/clover/service.env`; the scripts read it. Never print it, never
-   copy it anywhere.
+6. **No keys.** The scripts use Clover's public key, which may write only the
+   three checker columns. Never look for, print or copy any other key.
 7. **Gentle.** At most 12 codes per store, 2.5 seconds between them. One store
    at a time. If a shop rate-limits, stop that store.
 

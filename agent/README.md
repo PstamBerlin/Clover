@@ -24,13 +24,11 @@ nothing at all.
 
 ## Setting it up (Peter)
 
-1. Supabase > SQL editor: paste `supabase.sql` and run it (two columns and the view).
-2. Make `~/.config/clover/service.env` with one line, `CLOVER_SERVICE_KEY=<the
-   service key from Supabase > Settings > API>`. That file stays on this Mac;
-   nothing in the repo ever has it. Without it the checker still runs and
-   prints its results, but writes nothing.
-3. `pip install playwright` once (Google Chrome is used, nothing else downloaded).
-4. Turn the schedule on:
+1. Supabase > SQL editor: paste `supabase.sql` and run it (three columns, the
+   view, and a column-level grant so the public key may write exactly those
+   three columns; no secret key is needed anywhere).
+2. `pip install playwright` once (Google Chrome is used, nothing else downloaded).
+3. Turn the schedule on:
 
        cp agent/eu.clover.checker.plist ~/Library/LaunchAgents/
        launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/eu.clover.checker.plist
