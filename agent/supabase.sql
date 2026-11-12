@@ -12,9 +12,9 @@ alter table public.codes
 
 create or replace view public.code_stats as
 select c.id, c.store, c.code, c.label, c.detail, c.pct, c.kind, c.value, c.created_at,
-       c.checker_at, c.checker_result, c.checker_note,
        count(*) filter (where v.worked is true)  as works,
-       count(*) filter (where v.worked is false) as fails
+       count(*) filter (where v.worked is false) as fails,
+       c.checker_at, c.checker_result, c.checker_note   -- new view columns must come last
 from public.codes c
 left join public.votes v on v.code_id = c.id
 group by c.id;
