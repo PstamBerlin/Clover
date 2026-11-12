@@ -27,6 +27,15 @@ const CLOVER_RECIPES = [
     matches: ["*"],
     // Generic fallback: guesses based on common naming across most stores.
     codeInput: [
+      // the exact field names the big shop platforms use, first
+      "input[name='reductions']", "input[name='discount']", "input[id^='ReductionsInput']",          // Shopify
+      "#coupon_code", "input[name='coupon_code']",                                                   // WooCommerce
+      "#discount-code", "input[name='discount_code']",                                               // Magento
+      "input[name='discount_name']",                                                                  // PrestaShop
+      "#addPromotionInput", "input[name='code'][class*='promotion' i]",                              // Shopware
+      "input[name='couponcode']", "input[name='couponCode']",                                        // BigCommerce and others
+      "input[name='claimCode']", "#spc-gcpromoinput",                                                // Amazon
+      "input[name='voucherCode']", "input[name='promoCode']", "input[name='promocode']",
       // English
       "input[name*='promo' i]", "input[id*='promo' i]", "input[placeholder*='promo' i]", "input[aria-label*='promo' i]",
       "input[name*='coupon' i]", "input[id*='coupon' i]", "input[placeholder*='coupon' i]", "input[aria-label*='coupon' i]",
@@ -45,6 +54,7 @@ const CLOVER_RECIPES = [
       "input[placeholder*='code' i]", "input[aria-label*='code' i]"
     ].join(", "),
     applyButton: [
+      "button[name='apply_coupon']", "button.action.apply", "#addPromotionButton", "button[name='submitDiscount']",   // WooCommerce, Magento, Shopware, PrestaShop
       "button[id*='promo' i]", "button[id*='coupon' i]", "button[id*='apply' i]",
       "button[class*='promo' i]", "button[class*='coupon' i]", "button[class*='apply' i]",
       "button[class*='gutschein' i]", "button[class*='rabatt' i]",

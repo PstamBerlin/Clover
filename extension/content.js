@@ -66,12 +66,18 @@
       "input:not([type]), input[type='text'], input[type='search'], input[type='tel'], input[type='email']"
     ).filter(isShown).filter((el) => (el.type || "").toLowerCase() !== "email" || true);
 
-    box = fields.find((el) => {
+    // Score each field: discount/promo words win over "gift card" alone, and
+    // a field that only says "code" (zip code, security code) comes last.
+    const scored = fields.map((el) => {
       const own = [el.getAttribute("placeholder"), el.getAttribute("aria-label"),
                    el.getAttribute("name"), el.id, labelTextFor(el)].join(" ");
-      return PROMO_STRONG.test(own);
-    });
-    if (box) return box;
+      if (!PROMO_STRONG.test(own)) return null;
+      let score = PROMO_STRICT.test(own) ? 3 : 1;
+      if (/gift ?card|geschenkkarte|cadeaubon|carte cadeau/i.test(own) && !PROMO_STRICT.test(own)) score -= 1;
+      if (/zip|postal|security|cvv|cvc|verification|sms|otp|phone|email/i.test(own)) score -= 3;
+      return { el, score };
+    }).filter(Boolean).filter((x) => x.score > 0).sort((a, b) => b.score - a.score);
+    if (scored.length) return scored[0].el;
 
     // 3) a field whose small surrounding box reads like a promo field
     //    (covers floating labels where the text is a sibling, not the input)
@@ -122,7 +128,13 @@
 
   // Read the GRAND total. Stores split the "Gesamt/Total" label and the price
   // into separate elements, so find the label, then the price in its row.
+  let totalEl = null;   // the element the grand total was last read from
   function readTotal(recipe) {
+    if (totalEl && totalEl.isConnected && isShown(totalEl)) {
+      const v = parseMoney((totalEl.textContent || "").replace(/gesamtersparnis[^\d]*[\d.,]+/i, ""));
+      if (v != null) return v;
+    }
+    totalEl = null;
     const labels = deepQueryAll("*").filter((el) => {
       if (!isShown(el)) return false;
       const own = Array.from(el.childNodes).filter((n) => n.nodeType === 3)
@@ -135,13 +147,33 @@
         const t = row.textContent || "";
         if (/\d[.,]\d{2}/.test(t)) {
           const v = parseMoney(t.replace(/gesamtersparnis[^\d]*[\d.,]+/i, ""));
-          if (v != null) return v;
+          if (v != null) { totalEl = row; return v; }
         }
         row = row.parentElement;
       }
     }
-    for (const el of deepQueryAll(recipe.total)) { const v = parseMoney(el.textContent); if (v != null) return v; }
+    for (const el of deepQueryAll(recipe.total)) { const v = parseMoney(el.textContent); if (v != null) { totalEl = el; return v; } }
     return null;
+  }
+
+  // Did the shop just say no? Looked for near the code box right after an
+  // attempt, so a dead code costs a second instead of the full wait.
+  const ERROR_WORDS = /(invalid|not valid|isn.t valid|unrecognised|unrecognized|not recognised|not recognized|incorrect|expired|no longer valid|doesn.t exist|does not exist|can.t be applied|cannot be applied|not applicable|not eligible|ungültig|ungueltig|nicht gültig|abgelaufen|unbekannt|nicht erkannt|existiert nicht|ongeldig|verlopen|onbekend|invalide|non valide|expiré|inconnu|inválido|invalido|caducado|expirado|scaduto|non valido|nieprawidłowy|неверн|недействител|無効|无效|유효하지)/i;
+  function codeRejected(box) {
+    const roots = [];
+    if (box && box.form) roots.push(box.form);
+    let el = box && box.parentElement;
+    for (let i = 0; i < 4 && el; i++) { roots.push(el); el = el.parentElement; }
+    for (const r of roots) {
+      const t = (r.textContent || "").slice(0, 2000);
+      if (ERROR_WORDS.test(t)) return true;
+      if (r.querySelector && r.querySelector('[aria-invalid="true"], [role="alert"]:not(:empty), .error:not(:empty), [class*="error" i]:not(:empty)')) {
+        const e = r.querySelector('[aria-invalid="true"], [role="alert"]:not(:empty), .error:not(:empty), [class*="error" i]:not(:empty)');
+        if (e && isShown(e) && (e.textContent || "").trim()) return true;
+      }
+    }
+    if (box && box.getAttribute && box.getAttribute("aria-invalid") === "true") return true;
+    return false;
   }
 
   function codesForStore() {
@@ -150,6 +182,95 @@
       if (host.includes(key)) return table[key];
     }
     return [];
+  }
+
+  // The codes saved in the popup ("Codes Clover will try at checkout"). The
+  // first version of the extension never actually tried them.
+  function savedCodesForStore() {
+    return new Promise((resolve) => {
+      try {
+        chrome.storage.local.get(["cloverCodes"], (r) => {
+          const all = Array.isArray(r.cloverCodes) ? r.cloverCodes : [];
+          resolve(all.filter((c) => c && c.code && c.store && (host.includes(String(c.store).toLowerCase().replace(/^www\./, "")) || String(c.store).toLowerCase().includes(host))).map((c) => c.code));
+        });
+      } catch (e) { resolve([]); }
+    });
+  }
+
+  // What happened with each code on this store before, kept 14 days, so a
+  // code that failed here last week goes to the back of the queue.
+  const TRIED_KEY = "cloverTried";
+  const TRIED_TTL = 14 * 24 * 3600 * 1000;
+  function getTried() {
+    return new Promise((resolve) => {
+      try { chrome.storage.local.get([TRIED_KEY], (r) => resolve((r[TRIED_KEY] || {})[host] || {})); }
+      catch (e) { resolve({}); }
+    });
+  }
+  function rememberTried(results) {
+    try {
+      chrome.storage.local.get([TRIED_KEY], (r) => {
+        const all = r[TRIED_KEY] || {};
+        const mine = all[host] || {};
+        const now = Date.now();
+        Object.keys(mine).forEach((k) => { if (now - (mine[k].at || 0) > TRIED_TTL) delete mine[k]; });
+        results.forEach((x) => { mine[x.code.toUpperCase()] = { ok: !!x.ok, at: now }; });
+        all[host] = mine;
+        chrome.storage.local.set({ [TRIED_KEY]: all });
+      });
+    } catch (e) {}
+  }
+
+  // A code that looks issued to one person (a scrambled token), the same
+  // test the site uses. Those go last: failing is expected.
+  function looksSingleUse(code) {
+    if (code.length < 6) return false;
+    let flips = 0;
+    for (let i = 1; i < code.length; i++) { if (/\d/.test(code[i - 1]) !== /\d/.test(code[i])) flips++; }
+    const letters = code.replace(/[^A-Za-z]/g, "");
+    const vowels = (letters.match(/[aeiouAEIOU]/g) || []).length;
+    if (!letters.length) return true;
+    return flips >= 4 || (vowels / letters.length < 0.12 && letters.length >= 6);
+  }
+
+  const MAX_TRIES = 15;   // shops lock the field after too many attempts
+  async function buildTryList() {
+    const seen = new Set();
+    const out = [];
+    const push = (code, id, rank) => {
+      const k = String(code || "").trim();
+      if (!k || seen.has(k.toUpperCase())) return;
+      seen.add(k.toUpperCase());
+      out.push({ code: k, id: id || null, rank });
+    };
+    // 1) the person's own saved codes, first and always
+    (await savedCodesForStore()).forEach((c) => push(c, null, -100));
+    // 2) the shared list, best first: more "worked" votes rank higher, codes
+    //    that retired (under 40 % with 4+ reports) are left out, scrambled
+    //    one-use tokens go last
+    let cloud = [];
+    try { cloud = await cloudCodesForStore(); } catch (e) { cloud = []; }
+    const tried = await getTried();
+    cloud.forEach((row) => {
+      if (!row.code) return;
+      const up = row.works || 0, down = row.fails || 0, n = up + down;
+      const rate = n ? up / n : null;
+      if (rate !== null && n >= 4 && rate < 0.4) return;   // retired
+      let rank = -(up * 10) + down * 3;
+      if (looksSingleUse(row.code)) rank += 50;
+      push(row.code, row.id, rank);
+    });
+    // 3) the built-in list, after the shared one (they overlap; the shared
+    //    row carries the id that lets a win count for everyone)
+    codesForStore().forEach((c) => push(c, null, looksSingleUse(c) ? 60 : 20));
+    // what failed here recently goes to the back; what worked here goes first
+    out.forEach((x) => {
+      const t = tried[x.code.toUpperCase()];
+      if (t && t.ok) x.rank -= 1000;
+      else if (t && !t.ok) x.rank += 500;
+    });
+    out.sort((a, b) => a.rank - b.rank);
+    return out.slice(0, MAX_TRIES);
   }
 
   // ---- community codes (Supabase, via the background worker) ----------
@@ -624,20 +745,10 @@
       return;
     }
 
-    // Merge built-in codes with community codes from Supabase.
-    const list = [];
-    const seen = new Set();
-    codesForStore().forEach((c) => {
-      if (c && !seen.has(c)) { seen.add(c); list.push({ code: c, id: null }); }
-    });
-    let cloud = [];
-    try { cloud = await cloudCodesForStore(); } catch (e) { cloud = []; }
-    cloud.forEach((row) => {
-      if (row.code && !seen.has(row.code)) {
-        seen.add(row.code);
-        list.push({ code: row.code, id: row.id });
-      }
-    });
+    // Saved codes first, then the shared list ranked by what worked for
+    // people, then the built-in list; retired codes left out, at most
+    // MAX_TRIES so the shop never locks the field.
+    const list = await buildTryList();
 
     if (list.length === 0) {
       say("No codes saved for this store", { kind: "miss", hold: 3000 });
@@ -679,16 +790,21 @@
     const startTotal = readTotal(recipe);
 
     // Wait for the store to recalculate — Shopify etc. update the total a beat
-    // after a code is applied. Poll until it drops below `below`, or give up.
+    // after a code is applied. Poll until it drops below `below`, the shop
+    // says the code is no good, or we give up.
     const settle = async (below, tries) => {
       let now = readTotal(recipe);
       for (let w = 0; w < (tries || 8); w++) {
         await sleep(450);
         now = readTotal(recipe);
         if (below != null && now != null && now < below - 0.001) break;
+        if (w >= 1 && codeRejected(box)) break;
       }
       return now;
     };
+    // the gap between attempts from the settings ("Wait between codes")
+    const gap = Math.max(300, Number(S.delay) || 1400);
+    const results = [];
 
     // After taking a code off, the store also needs a beat to put the price
     // back UP. Wait for it, so the next code is not measured against a total
@@ -711,12 +827,14 @@
       peekAt(item.code, i, list.length);
       say(item.code, { kind: "code" });
 
+      const t0 = Date.now();
       await applyCode(box, recipe, item.code);
       const now = await settle(startTotal, 8);
 
       if (startTotal && now != null && now < startTotal - 0.001) {
         const saved = startTotal - now;
         worked.push({ code: item.code, id: item.id, saved: saved });
+        results.push({ code: item.code, ok: true });
         foundCount++;
         tallyEl.textContent = foundCount === 1
           ? "Found 1 that works so far ✓"
@@ -726,8 +844,13 @@
         await removeCode(item.code);
         await settleUp(startTotal);            // wait for the price to revert
         box = (await revealCodeBox(recipe)) || box;
+      } else {
+        results.push({ code: item.code, ok: false });
       }
+      const spent = Date.now() - t0;
+      if (i < list.length - 1 && spent < gap) await sleep(gap - spent);
     }
+    rememberTried(results);
 
     if (worked.length === 0) {
       setMood("sad");
@@ -820,8 +943,11 @@
     body.classList.add("clover-celebrate");
     countUp(body.querySelector(".clover-amt"), finalSaved);
 
-    // Tell the community which codes worked, so they turn green for everyone.
-    applied.forEach((a) => { if (a.id) cloudSend({ type: "clover_vote", id: a.id, worked: true }); });
+    // Tell the community which codes worked, so they turn green for everyone:
+    // every code that lowered the total in the first pass, not only the one
+    // left on the order (a better code beating it says nothing against it).
+    const credited = new Set();
+    worked.forEach((w) => { if (w.id && !credited.has(w.id)) { credited.add(w.id); cloudSend({ type: "clover_vote", id: w.id, worked: true }); } });
     setTimeout(() => setMood("idle"), 4000);
   }
 
@@ -885,7 +1011,19 @@
     if (!S.enabled) return;
 
     mount();
-    const observer = new MutationObserver(mount);
+    if (document.body && document.body.contains(badge)) return;
+    // Pages keep changing; look again at most every 1.5 s, and stop once
+    // the clover is on the page.
+    let pending = false;
+    const observer = new MutationObserver(() => {
+      if (pending) return;
+      pending = true;
+      setTimeout(() => {
+        pending = false;
+        mount();
+        if (document.body && document.body.contains(badge)) observer.disconnect();
+      }, 1500);
+    });
     observer.observe(document.documentElement, { childList: true, subtree: true });
   }
 
