@@ -2013,7 +2013,28 @@ let cloudSynced = false;
 async function cloudFetchCodes(){
   const r = await fetch(SUPA_URL + "/rest/v1/code_stats?select=*", { headers: SUPA_H });
   if(!r.ok) throw new Error("codes " + r.status);
-  return await r.json();
+  const rows = await r.json();
+  // The day each code last worked for someone comes from the votes themselves,
+  // never from the moment this page happened to load. If the votes cannot be
+  // read, the codes keep no date rather than a made-up one.
+  try{
+    const v = await fetch(SUPA_URL + "/rest/v1/votes?select=code_id,worked,created_at", { headers: SUPA_H });
+    if(v.ok){
+      const last = {};
+      // The seed list was copied into the database on 24 Aug 2026 with one
+      // vote per code that a person had tested; those votes repeat the test
+      // day in the seed, so they carry no date of their own.
+      const IMPORT_DAY_END = Date.parse("2026-08-25T00:00:00Z");
+      (await v.json()).forEach(function(x){
+        if(!x.worked || !x.created_at) return;
+        const t = Date.parse(x.created_at);
+        if(t < IMPORT_DAY_END) return;
+        if(!(last[x.code_id] > t)) last[x.code_id] = t;
+      });
+      rows.forEach(function(row){ row.last_ok = last[row.id] || null; });
+    }
+  }catch(e){}
+  return rows;
 }
 function cloudVote(codeId, worked){
   fetch(SUPA_URL + "/rest/v1/votes", { method:"POST", headers: SUPA_H,
@@ -2044,7 +2065,8 @@ async function cloudReconcile(list){
       c.sid = cc.id;
       c.up = cc.works || 0;
       c.down = cc.fails || 0;
-      if(c.up > 0 && !c.lastOk) c.lastOk = Date.now();
+      // the newer of: the day a person tested it (seed) and the latest "worked" vote
+      if(cc.last_ok && !(c.lastOk > cc.last_ok)) c.lastOk = cc.last_ok;
     }
   });
   cloud.forEach(function(cc){
@@ -2055,7 +2077,7 @@ async function cloudReconcile(list){
         note: cc.label || "", limits: cc.detail || "", cat: "other", country: "XX",
         by: "Clover", single: undefined, bot: null, testedOn: null, exp: null,
         up: cc.works || 0, down: cc.fails || 0, at: Date.now(),
-        lastOk: (cc.works||0) > 0 ? Date.now() : null, cloud: true
+        lastOk: cc.last_ok || null, cloud: true
       });
     }
   });
@@ -3235,12 +3257,24 @@ function renderStats(codes){
   // Only count codes people have actually reported on, and leave out the
   // one-use ones since they are meant to stop working.
   const reported=live.filter(c=>((c.up||0)+(c.down||0))>0 && !isSingleUse(c));
+  // A headline percentage needs real evidence: at least CONFIDENT_CODES codes
+  // that each have CONFIDENT reports. Until then a single vote per code would
+  // read as "100% working", which nobody has shown, so it stays a word.
+  const CONFIDENT_CODES = 5;
+  const confident=reported.filter(c=>((c.up||0)+(c.down||0))>=CONFIDENT);
   const el=document.getElementById("s-rate");
+  const lab=el.nextElementSibling;
   if(reported.length===0){
-    el.textContent="—";
-  }else{
+    el.textContent="—"; lab.textContent="Working"; lab.title="No reports yet";
+  }else if(confident.length<CONFIDENT_CODES){
     const avg=Math.round(reported.map(rate).reduce((a,b)=>a+b,0)/reported.length);
-    el.textContent=reported.length<CONFIDENT ? (avg>=60?"high":avg>=40?"mixed":"low") : avg+"%";
+    el.textContent=avg>=60?"high":avg>=40?"mixed":"low";
+    lab.textContent="Working, early";
+    lab.title=reported.length+" code"+(reported.length===1?"":"s")+" reported on, "+confident.length+" with "+CONFIDENT+" or more reports. A percentage shows once "+CONFIDENT_CODES+" codes have that many.";
+  }else{
+    const avg=Math.round(confident.map(rate).reduce((a,b)=>a+b,0)/confident.length);
+    el.textContent=avg+"%"; lab.textContent="Working";
+    lab.title="Across "+confident.length+" codes with "+CONFIDENT+" or more reports each";
   }
 
   document.getElementById("s-people").textContent=
