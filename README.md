@@ -16,11 +16,14 @@ Community coupon codes are served from a Supabase backend.
 
 - `src/site.html` the page, `src/site.css` the look, `src/site.js` the behaviour
 - `src/data.js` the starter codes, creator deals, always-on discounts and the comparison table
-- `src/zip.b64.txt` the extension zip as base64 (refresh after changing `extension/`:
-  `cd extension && zip -r - . | base64 > ../src/zip.b64.txt`)
+- `clover-extension.zip` is written by the same build from `extension/`; the download buttons point at it
 - `fonts/` Manrope and Unbounded, shipped with the site (SIL Open Font License)
+
+Tests (needs Python 3 and Playwright with Chrome): `python3 tests/site_test.py`.
+They stub the database's write calls, so no test vote ever reaches the shared list.
 
 The look: Clover's greens in the grammar of the Aurora look (mesh, frosted
 glass, one butter-yellow accent, Unbounded + Manrope). Votes and added codes
-go to the shared Supabase database; what this browser did (its own votes,
-its own codes, requests, referral links, the theme) stays in localStorage.
+go to the shared Supabase database. The browser keeps only what the person
+did here (their own codes, votes, requests, referral links, the theme); the
+list itself is rebuilt from the seed and the database on every load.

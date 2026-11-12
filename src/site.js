@@ -6,9 +6,9 @@
    percentage, codes under 40% with four or more reports retire themselves. */
 
 /* ---------- config ---------- */
-const KEY = "clover-codes-v2";
-const VOTED_KEY = "clover-voted";
-const MINE_KEY = "clover-mine";
+const MINE_KEY = "clover-mine-v2";    // codes added in this browser, whole
+const VOTED_KEY = "clover-voted-v2";  // {id: {dir, sent, at}} this browser's votes
+const OLD_KEYS = { list:"clover-codes-v2", mine:"clover-mine", voted:"clover-voted" };
 const REQ_KEY = "clover-requests-v1";
 const REF_KEY = "clover-referrals-v1";
 const THEME_KEY = "clover-theme";
@@ -19,58 +19,97 @@ const CONFIDENT_CODES = 5;// codes with that many before the headline shows one
 
 /* ---------- storage: this browser only ----------
    The first site used a storage API that only existed where it was built,
-   so on the real site nothing stuck. This one keeps everything in
-   localStorage: the code list, which codes you voted on and added, your
-   requests, your referral links and the theme. Shared things (codes, votes)
-   also go to the shared database below. */
+   so on the real site nothing stuck. This one keeps the person's own things
+   in localStorage: the codes they added, their votes, their requests, their
+   referral links and the theme. Everything else (the seed list, the shared
+   counts) is rebuilt on every load, so a fixed or removed seed code never
+   lingers in anyone's browser. Shared things also go to the database below. */
 const store = {
   get(k){ try{ const v = localStorage.getItem(k); return v === null ? null : JSON.parse(v); }catch(e){ return null; } },
-  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ storageOK = false; return false; } },
+  drop(k){ try{ localStorage.removeItem(k); }catch(e){} }
 };
 let MEM = null;
 let storageOK = true;
+// one id per code, the same on every load: the store and the code
+function codeId(storeName, code){ return String(storeName||"").toLowerCase()+"|"+String(code||"").toLowerCase(); }
+
+let mine = store.get(MINE_KEY);
+if(!Array.isArray(mine)) mine = [];
+let voted = store.get(VOTED_KEY);
+if(!voted || typeof voted !== "object" || Array.isArray(voted)) voted = {};
+
+// The first version of this site kept the whole list and random ids. Carry
+// over what was the person's own: their codes and which codes they voted on.
+(function migrate(){
+  const old = store.get(OLD_KEYS.list);
+  if(!Array.isArray(old)) return;
+  const oldMine = store.get(OLD_KEYS.mine) || [];
+  const oldVoted = store.get(OLD_KEYS.voted) || {};
+  const byOldId = {};
+  old.forEach(c=>{ if(c && c.id) byOldId[c.id] = c; });
+  oldMine.forEach(id=>{
+    const c = byOldId[id];
+    if(c && c.store && c.code && !mine.some(m=>codeId(m.store,m.code) === codeId(c.store,c.code))){
+      mine.push({ store:c.store, code:c.code, note:c.note||"", limits:c.limits||"", by:c.by||"", exp:c.exp||null, country:c.country||"XX", cat:c.cat||"other", at:c.at||Date.now(), sid:c.sid||null });
+    }
+  });
+  Object.keys(oldVoted).forEach(id=>{
+    const c = byOldId[id];
+    if(c && c.store && c.code && (oldVoted[id] === "up" || oldVoted[id] === "down")){
+      voted[codeId(c.store,c.code)] = { dir:oldVoted[id], sent:!!c.sid, at:c.lastOk||Date.now() };
+    }
+  });
+  store.set(MINE_KEY, mine); store.set(VOTED_KEY, voted);
+  store.drop(OLD_KEYS.list); store.drop(OLD_KEYS.mine); store.drop(OLD_KEYS.voted);
+})();
 
 function getCodes(){
   if(MEM !== null) return MEM;
-  let loaded = store.get(KEY);
-  if(!Array.isArray(loaded)) loaded = [];
-  loaded.forEach(c=>{ if(c.seed && c.by === "Peter") c.by = "Clover"; });
-  MEM = mergeSeed(loaded);
+  const seen = new Set();
+  const list = [];
+  const now = Date.now();
+  SEED.forEach((s,i)=>{
+    const id = codeId(s.store, s.code);
+    if(seen.has(id)) return;   // a code can appear twice in SEED by hand
+    seen.add(id);
+    list.push({
+      id, store:s.store, code:s.code, note:s.note, limits:s.limits,
+      cat:s.cat, country:s.country, by:"Clover",
+      single:s.single,
+      bot:s.bot || null,              // set only by Clover's own checker
+      testedOn:s.testedOn || null,    // the day a person put it in a cart
+      exp:null,
+      up:s.verified ? 1 : 0,
+      down:s.failedTwice ? 2 : (s.failed ? 1 : 0),
+      at:now - (SEED.length-i)*1000,
+      lastOk:s.verified && s.testedOn ? Date.parse(s.testedOn+"T00:00:00") : null,
+      seed:true
+    });
+  });
+  mine.forEach(m=>{
+    const id = codeId(m.store, m.code);
+    if(seen.has(id)) return;
+    seen.add(id);
+    list.push({ id, store:m.store, code:m.code, note:m.note||"", limits:m.limits||"", by:m.by||"", exp:m.exp||null,
+      country:m.country||"XX", cat:m.cat||"other", up:0, down:0, at:m.at||now, lastOk:null, sid:m.sid||null, own:true });
+  });
+  MEM = list;
+  applyLocalVotes(MEM);
   return MEM;
 }
-function mergeSeed(list){
-  const have = new Set(list.map(c=>c.store+"|"+c.code));
-  const seen = new Set();
-  const missing = SEED.filter(s=>{
-    const key = s.store+"|"+s.code;
-    if(have.has(key) || seen.has(key)) return false;
-    seen.add(key); return true;
+// A vote the shared database never got (no connection, or the code had no
+// shared id yet) still counts here, on this device.
+function applyLocalVotes(list){
+  list.forEach(c=>{
+    const v = voted[c.id];
+    if(!v || v.sent) return;
+    c[v.dir] = (c[v.dir]||0)+1;
+    if(v.dir === "up" && !(c.lastOk > v.at)) c.lastOk = v.at;
   });
-  if(missing.length === 0) return list;
-  const now = Date.now();
-  const added = missing.map((s,i)=>({
-    id:"seed"+now.toString(36)+i.toString(36),
-    store:s.store, code:s.code, note:s.note, limits:s.limits,
-    cat:s.cat, country:s.country, by:"Clover",
-    single:s.single,
-    bot:s.bot || null,              // set only by Clover's own checker
-    testedOn:s.testedOn || null,    // the day a person put it in a cart
-    exp:null,
-    up:s.verified ? 1 : 0,
-    down:s.failedTwice ? 2 : (s.failed ? 1 : 0),
-    at:now - (missing.length-i)*1000,
-    // the day it was tested if known; never a made-up precision
-    lastOk:s.verified ? (s.testedOn ? Date.parse(s.testedOn+"T00:00:00") : null) : null,
-    seed:true
-  }));
-  return list.concat(added);
 }
-function putCodes(c){
-  MEM = c;
-  // Only what this browser knows is kept; the shared counts come back from
-  // the database on every load anyway.
-  if(!store.set(KEY, c)) storageOK = false;
-}
+function saveMine(){ store.set(MINE_KEY, mine); }
+function saveVoted(){ store.set(VOTED_KEY, voted); }
 
 /* ---------- shared live database (Supabase) ----------
    The site works entirely on its own; this layers the shared database on
@@ -127,19 +166,21 @@ async function cloudReconcile(list){
     const cc = byKey.get(c.store+"|"+c.code);
     if(cc){
       c.sid = cc.id; c.up = cc.works || 0; c.down = cc.fails || 0;
+      if(c.own){ const m = mine.find(x=>codeId(x.store,x.code) === c.id); if(m && m.sid !== cc.id){ m.sid = cc.id; saveMine(); } }
       if(cc.last_ok && !(c.lastOk > cc.last_ok)) c.lastOk = cc.last_ok;
     }
   });
   cloud.forEach(cc=>{
     const key = (cc.store||"")+"|"+(cc.code||"");
     if(cc.code && !localKeys.has(key)){
-      list.push({ id:"cloud"+cc.id, sid:cc.id, store:cc.store, code:cc.code,
+      list.push({ id:codeId(cc.store, cc.code), sid:cc.id, store:cc.store, code:cc.code,
         note:cc.label || "", limits:cc.detail || "", cat:"other", country:"XX",
         by:"Clover", single:undefined, bot:null, testedOn:null, exp:null,
         up:cc.works || 0, down:cc.fails || 0, at:Date.now(), lastOk:cc.last_ok || null, cloud:true });
     }
   });
   cloudSynced = true;
+  applyLocalVotes(list);
   return true;
 }
 
@@ -202,10 +243,6 @@ function copyText(t){ try{ navigator.clipboard && navigator.clipboard.writeText(
 /* ---------- state ---------- */
 let fStore = "all", fCountry = "all", fCat = "all", query = "", showDead = false;
 let openStore = null, listOpen = false, chipsOpen = false, dirOpen = false, dirCat = "all";
-let voted = store.get(VOTED_KEY) || {};
-let mine = store.get(MINE_KEY) || [];
-if(typeof voted !== "object" || Array.isArray(voted)) voted = {};
-if(!Array.isArray(mine)) mine = [];
 
 /* ---------- filters ---------- */
 function countWith(codes, over){
@@ -395,9 +432,9 @@ function renderList(codes){
         </div>
       </div>
       <div class="votes">
-        <button type="button" class="vote up${voted[c.id] === "up" ? " chosen" : ""}" title="${voted[c.id] === "up" ? "You said this worked. Tap to undo." : "This code worked for me"}">Worked</button>
-        <button type="button" class="vote down${voted[c.id] === "down" ? " chosen" : ""}" title="${voted[c.id] === "down" ? "You said this failed. Tap to undo." : "This code did not work"}">Nope</button>
-        ${mine.includes(c.id) ? `<div class="ownrow"><button type="button" class="own edit">Edit</button><button type="button" class="own del">Delete</button></div>` : ""}
+        <button type="button" class="vote up${myVote(c.id) === "up" ? " chosen" : ""}" title="${myVote(c.id) === "up" ? "You said this worked. Tap to undo." : "This code worked for me"}">Worked</button>
+        <button type="button" class="vote down${myVote(c.id) === "down" ? " chosen" : ""}" title="${myVote(c.id) === "down" ? "You said this failed. Tap to undo." : "This code did not work"}">Nope</button>
+        ${c.own ? `<div class="ownrow"><button type="button" class="own edit">Edit</button><button type="button" class="own del">Delete</button></div>` : ""}
       </div>`;
     el.querySelector(".code-pill").onclick = e=>{
       copyText(c.code);
@@ -438,25 +475,31 @@ function showNudge(c){
 }
 
 /* ---------- votes: one per device, undo by tapping again ---------- */
+function myVote(id){ const v = voted[id]; return v ? v.dir : undefined; }
 function vote(id, dir){
   const codes = getCodes();
   const c = codes.find(x=>x.id === id);
   if(!c) return;
   const had = voted[id];
-  if(had === dir){
+  if(had && had.dir === dir){
+    // the same button again takes the vote back, here; the shared database
+    // is append-only, so what was already sent stays sent
     c[dir] = Math.max(0,(c[dir]||0)-1);
     delete voted[id];
-  }else{
-    if(had) c[had] = Math.max(0,(c[had]||0)-1);
+  }else if(had){
+    // changing your mind moves the vote rather than adding another
+    c[had.dir] = Math.max(0,(c[had.dir]||0)-1);
     c[dir] = (c[dir]||0)+1;
-    voted[id] = dir;
+    voted[id] = { dir, sent:had.sent, at:Date.now() };
     if(dir === "up") c.lastOk = Date.now();
+  }else{
+    c[dir] = (c[dir]||0)+1;
+    const sent = !!c.sid;
+    voted[id] = { dir, sent, at:Date.now() };
+    if(dir === "up") c.lastOk = Date.now();
+    if(sent) cloudVote(c.sid, dir === "up");
   }
-  putCodes(codes);
-  store.set(VOTED_KEY, voted);
-  // The shared database is append-only and this device adds one vote per
-  // code, so it is sent once, the first time.
-  if(c.sid && !had) cloudVote(c.sid, dir === "up");
+  saveVoted();
   draw();
 }
 
@@ -620,37 +663,6 @@ function renderDeals(){
   });
 }
 
-/* ---------- contributors ---------- */
-function renderBoard(codes){
-  const box = document.getElementById("board");
-  const people = {};
-  codes.forEach(c=>{
-    if(!c.by || c.by === "Clover") return;
-    const p = people[c.by] || (people[c.by] = { name:c.by, added:0, limited:0, scored:0, live:0, reported:0, worked:0 });
-    p.added++;
-    if(isSingleUse(c)){ p.limited++; return; }
-    p.scored++;
-    if(isLive(c)) p.live++;
-    const reports = (c.up||0)+(c.down||0);
-    if(reports > 0){ p.reported++; p.worked += (c.up||0)/reports; }
-  });
-  const rows = Object.values(people).map(p=>{
-    p.quality = p.reported > 0 ? Math.round((p.worked/p.reported)*100) : null;
-    p.qualityLabel = p.quality === null ? "—" : p.reported < CONFIDENT ? rateWord(p.quality) : p.quality+"%";
-    return p;
-  }).sort((a,b)=>((b.quality ?? -1)-(a.quality ?? -1)) || b.added-a.added);
-  box.innerHTML = "";
-  if(rows.length === 0){ box.innerHTML = `<p class="fine">No names on the board yet. Add a code with your name and you are on it.</p>`; return; }
-  rows.forEach((p,i)=>{
-    const el = document.createElement("div");
-    el.className = "board-row";
-    const tone = p.quality === null ? "none" : p.quality >= 70 ? "good" : p.quality >= 40 ? "mid" : "poor";
-    el.innerHTML = `<div class="rank">${i+1}</div><div class="who">${esc(p.name)}<span>${p.live} of ${p.scored} still working${p.limited ? `, ${p.limited} limited` : ""}</span></div>
-      <div class="twoscore"><div class="sc amount"><b>${p.added}</b><span>added</span></div><div class="sc quality ${tone}"><b>${p.qualityLabel}</b><span>quality</span></div></div>`;
-    box.appendChild(el);
-  });
-}
-
 /* ---------- comparison ---------- */
 function renderCompare(){
   const head = document.getElementById("compare-head"), body = document.getElementById("compare-body");
@@ -728,8 +740,8 @@ function confirmDelete(id, btn){
     return;
   }
   armedDelete = null;
-  putCodes(getCodes().filter(x=>x.id !== id));
-  mine = mine.filter(x=>x !== id); store.set(MINE_KEY, mine);
+  mine = mine.filter(m=>codeId(m.store,m.code) !== id); saveMine();
+  MEM = getCodes().filter(x=>x.id !== id);
   if(editingId === id) stopEdit();
   draw();
 }
@@ -745,18 +757,24 @@ document.getElementById("save").addEventListener("click", async ()=>{
   const codes = getCodes();
   if(editingId){
     const c = codes.find(x=>x.id === editingId);
-    if(c){ Object.assign(c, { store:s, code, note, limits, by, exp:exp || null, country, cat }); putCodes(codes); }
+    const m = mine.find(x=>codeId(x.store,x.code) === editingId);
+    if(c && m){
+      // the id follows store and code, so editing those moves the card
+      Object.assign(m, { store:s, code, note, limits, by, exp:exp || null, country, cat }); saveMine();
+      Object.assign(c, { id:codeId(s, code), store:s, code, note, limits, by, exp:exp || null, country, cat });
+    }
     stopEdit(); st.textContent = "Saved."; st.className = "status ok"; draw(); return;
   }
-  if(codes.some(c=>c.store === s && c.code.toLowerCase() === code.toLowerCase())){
+  const id = codeId(s, code);
+  if(codes.some(c=>c.id === id)){
     st.textContent = "That code is already in the list for "+s+". Vote on it instead."; st.className = "status err"; return;
   }
-  const id = Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-  const newCode = { id, store:s, code, note, limits, by, exp:exp || null, country, cat, up:0, down:0, at:Date.now(), lastOk:null };
-  codes.push(newCode); putCodes(codes);
-  mine.push(id); store.set(MINE_KEY, mine);
+  const m = { store:s, code, note, limits, by, exp:exp || null, country, cat, at:Date.now(), sid:null };
+  mine.push(m); saveMine();
+  const newCode = { id, store:s, code, note, limits, by, exp:exp || null, country, cat, up:0, down:0, at:m.at, lastOk:null, sid:null, own:true };
+  codes.push(newCode);
   const sid = await cloudAddCode({ store:s, code, label:note || null, detail:limits || null, kind:"code" });
-  if(sid){ newCode.sid = sid; putCodes(codes); st.textContent = "Added, and shared with everyone."; }
+  if(sid){ newCode.sid = sid; m.sid = sid; saveMine(); st.textContent = "Added, and shared with everyone."; }
   else st.textContent = "Added here. The shared list could not be reached, so it stays in this browser for now.";
   st.className = "status ok";
   ["f-store","f-code","f-note","f-limits","f-by","f-exp"].forEach(x=>document.getElementById(x).value = "");
@@ -767,21 +785,9 @@ document.getElementById("save").addEventListener("click", async ()=>{
   draw(); scrollToList();
 });
 
-/* ---------- download ---------- */
-function downloadExtension(noteId){
-  const note = document.getElementById(noteId);
-  try{
-    const bin = atob(CLOVER_ZIP), bytes = new Uint8Array(bin.length);
-    for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
-    const url = URL.createObjectURL(new Blob([bytes], { type:"application/zip" }));
-    const a = document.createElement("a"); a.href = url; a.download = "clover-extension.zip";
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(url), 1000);
-    note.textContent = "Downloaded. Unzip it, then follow the steps."; note.className = "dlnote ok";
-  }catch(e){ note.textContent = "Download did not start. Try a different browser."; note.className = "dlnote"; }
-}
-document.getElementById("downloadbtn").addEventListener("click", ()=>downloadExtension("dlnote"));
-document.getElementById("downloadbtn2").addEventListener("click", ()=>downloadExtension("dlnote2"));
+/* ---------- download ----------
+   The extension is a plain zip file next to this page (clover-extension.zip,
+   built by build_site.py), so the buttons are ordinary links. */
 
 /* ---------- small things ---------- */
 document.getElementById("readmore").addEventListener("click", e=>{
@@ -836,15 +842,14 @@ function draw(){
   const safe = (fn,arg)=>{ try{ fn(arg); }catch(e){ console.warn(fn.name, e); } };
   safe(renderStats, codes); safe(renderChips, codes); safe(renderCats, codes); safe(renderCountries, codes);
   safe(renderStorePage, codes); safe(renderList, codes); safe(renderDirectory, codes);
-  safe(renderRequests, codes); safe(renderBoard, codes); safe(renderSync, codes);
+  safe(renderRequests, codes); safe(renderSync, codes);
 }
 async function boot(){
   loadTheme(); barLook();
   renderEver(); renderCompare(); renderDeals(); renderRefs();
   draw();
   // then the shared database on top, and draw again with real counts
-  const ok = await cloudReconcile(getCodes());
-  if(ok) putCodes(getCodes());
+  await cloudReconcile(getCodes());
   draw();
   if(!storageOK){
     const slot = document.getElementById("nudge-slot");

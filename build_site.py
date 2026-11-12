@@ -5,12 +5,13 @@
   src/site.css    the look
   src/site.js     the behaviour
   src/data.js     the seed codes, deals, always-on discounts, comparison table
-  src/zip.b64.txt the extension zip, base64, so the download button needs no server
-                  (refresh it with: zip -r - extension | base64 > src/zip.b64.txt)
+
+It also zips extension/ into clover-extension.zip, the file the download
+buttons point at.
 
 Run:  python3 build_site.py        (from the repo root)
 """
-import pathlib, re, subprocess, sys
+import pathlib, subprocess, sys, zipfile
 
 ROOT = pathlib.Path(__file__).resolve().parent
 SRC = ROOT / "src"
@@ -24,16 +25,19 @@ def main():
         if r.returncode:
             sys.exit(f"{f} does not parse:\n{r.stderr}")
     page = read("site.html")
-    zip_b64 = read("zip.b64.txt").strip()
-    if not re.fullmatch(r"[A-Za-z0-9+/=]+", zip_b64):
-        sys.exit("src/zip.b64.txt is not base64")
     out = (page
            .replace("/*CSS*/", read("site.css").strip())
            .replace("/*DATA*/", read("data.js").strip())
-           .replace("/*ZIP*/", 'const CLOVER_ZIP = "' + zip_b64 + '";')
            .replace("/*JS*/", read("site.js").strip()))
     (ROOT / "index.html").write_text(out, encoding="utf-8")
     print(f"index.html written: {len(out)/1024:.0f} KB")
+    ext = ROOT / "extension"
+    zpath = ROOT / "clover-extension.zip"
+    with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as z:
+        for f in sorted(ext.rglob("*")):
+            if f.is_file() and f.name != ".DS_Store":
+                z.write(f, f.relative_to(ext))
+    print(f"clover-extension.zip written: {zpath.stat().st_size/1024:.0f} KB")
 
 if __name__ == "__main__":
     main()

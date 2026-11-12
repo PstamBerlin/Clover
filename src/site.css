@@ -20,6 +20,7 @@
   --amber-ink:#8A6A05; --amber-soft:#FFF6DD; --amber-line:#F0E2B8;
   --edge-a:#4ADE80; --edge-b:#2DD4BF;
   --frost:rgba(255,255,255,.72); --frost-strong:rgba(255,255,255,.86); --frost-blur:26px; --glass-line:rgba(255,255,255,.65);
+  --card:rgba(255,255,255,.82);   /* the small cards: no blur, there can be hundreds */
   --mesh-top:#07160F; --mesh-mid:#0E3B24; --mesh-bottom:#1D8A4E;
   --font:"Manrope","Avenir Next","Segoe UI",system-ui,sans-serif;
   --display:"Unbounded","Avenir Next",system-ui,sans-serif;
@@ -34,6 +35,7 @@ body.dark{
   --coral:#FDA4AF; --coral-soft:rgba(225,29,72,.2);
   --amber-ink:#FDE68A; --amber-soft:rgba(253,230,138,.12); --amber-line:rgba(253,230,138,.3);
   --frost:rgba(9,26,18,.55); --frost-strong:rgba(9,26,18,.78); --glass-line:rgba(134,239,172,.22);
+  --card:rgba(9,26,18,.72);
 }
 
 *{box-sizing:border-box}
@@ -181,14 +183,14 @@ main{position:relative;z-index:1;max-width:980px;margin:0 auto;padding:44px 20px
 }
 .mesh b{color:#fff}
 .mesh a{color:var(--butter)}
+.mesh a.btn{color:var(--butter-ink)}
+.mesh a.btn.glass{color:#ECF7EE}
 .mesh .dim{color:rgba(236,247,238,.72)}
 .getrow{display:flex;align-items:center;gap:12px;margin-bottom:16px}
 .getrow svg{width:36px;height:36px;flex-shrink:0}
 .getrow b{display:block;font-size:1.05rem}
 .getrow span{font-size:.84rem;color:rgba(236,247,238,.72)}
 .getbtns{display:flex;flex-direction:column;gap:8px}
-.dlnote{min-height:1.2em;margin:10px 0 0;font-size:.82rem;color:rgba(236,247,238,.8)}
-.dlnote.ok{color:var(--spring)}
 .steps{display:none;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.14);font-size:.88rem}
 .steps.open{display:block}
 .steps .stepgroup{margin:10px 0 4px;font-weight:800;color:var(--spring)}
@@ -246,8 +248,7 @@ body.dark .chip.on,body.dark .chip.on:hover{
 #list{margin-top:14px}
 .code{
   display:flex;align-items:center;gap:14px;padding:14px 16px;margin-bottom:10px;
-  background:var(--frost);border:1px solid var(--line);border-radius:14px;
-  -webkit-backdrop-filter:blur(var(--frost-blur)) saturate(1.4);backdrop-filter:blur(var(--frost-blur)) saturate(1.4);
+  background:var(--card);border:1px solid var(--line);border-radius:14px;
   box-shadow:inset 0 1px 0 var(--glass-line);
   animation:rise .38s backwards cubic-bezier(.2,.9,.3,1.1);
   transition:border-color var(--speed),box-shadow var(--speed);
@@ -333,7 +334,7 @@ body.dark .vote.chosen{background:var(--spring);color:#07160F;border-color:var(-
 .dirgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 .dircard{
   display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:14px;text-align:left;cursor:pointer;
-  background:var(--frost);border:1px solid var(--line);border-radius:14px;animation:rise .3s backwards;
+  background:var(--card);border:1px solid var(--line);border-radius:14px;animation:rise .3s backwards;
   transition:border-color var(--speed),box-shadow var(--speed);
 }
 .dircard:hover{border-color:var(--edge-a);box-shadow:0 0 0 3px rgba(74,222,128,.16)}
@@ -346,7 +347,7 @@ body.dark .vote.chosen{background:var(--spring);color:#07160F;border-color:var(-
 .dirgrid .showall{grid-column:1/-1}
 .ask{display:flex;gap:8px;margin-top:14px}
 .ask input{flex:1;padding:11px 14px;border-radius:999px;border:1px solid var(--line);background:var(--frost);color:var(--ink);font:inherit;font-size:.9rem}
-.req{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-top:8px;border:1px solid var(--line);border-radius:12px;background:var(--frost);font-size:.88rem}
+.req{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-top:8px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:.88rem}
 .req-main{flex:1}
 .req-main b{display:block}
 .req-main span{font-size:.76rem;color:var(--ink-dim)}
@@ -389,7 +390,7 @@ body.dark .vote.chosen{background:var(--spring);color:#07160F;border-color:var(-
 .mark.half{color:var(--amber-ink)}
 .mark.no{color:var(--coral)}
 .mark.us{background:rgba(134,239,172,.12)}
-.deal,.ref{display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:8px;border:1px solid var(--line);border-radius:12px;background:var(--frost);font-size:.88rem;animation:rise .3s backwards}
+.deal,.ref{display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:8px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:.88rem;animation:rise .3s backwards}
 .deal-main,.ref-main{flex:1;min-width:0}
 .deal-main b,.ref-main b{display:block}
 .deal-main span,.ref-main span{display:block;font-size:.8rem;color:var(--ink-dim)}
@@ -399,17 +400,8 @@ body.dark .vote.chosen{background:var(--spring);color:#07160F;border-color:var(-
 .ref-share{font-style:italic}
 .refform{margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
 .refform .btn{margin-top:4px}
-.board-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;margin-bottom:6px;background:var(--frost);font-size:.88rem}
-.board-row .rank{font-family:var(--display);font-weight:800;color:var(--spring-deep);width:24px}
-.board-row .who{flex:1}
-.board-row .who span{display:block;font-size:.74rem;color:var(--ink-dim)}
-.twoscore{display:flex;gap:14px}
-.twoscore .sc{text-align:center}
-.twoscore .sc b{display:block;font-family:var(--display);font-weight:800}
-.twoscore .sc span{font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint)}
-.sc.good b{color:var(--spring-deep)}.sc.mid b{color:var(--amber-ink)}.sc.poor b{color:var(--coral)}
 .groupline{margin:14px 0 6px;font-size:.66rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--spring-deep)}
-.ever{display:flex;align-items:flex-start;gap:11px;padding:12px 14px;margin-bottom:8px;border:1px solid var(--line);border-radius:12px;background:var(--frost);font-size:.88rem;animation:rise .3s backwards}
+.ever{display:flex;align-items:flex-start;gap:11px;padding:12px 14px;margin-bottom:8px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:.88rem;animation:rise .3s backwards}
 .ever>.favicon{flex-shrink:0;margin-top:2px}
 .ever div{flex:1}
 .ever b{display:block}

@@ -2,12 +2,9 @@
    greens in the grammar of the Aurora look, like the site and the popup:
    a mesh header, frosted glass, one butter-yellow button, Unbounded for
    the big number. Everything is prefixed clover- and pinned to the corner
-   so it never fights the shop's own styles. The fonts are the extension's
-   own files (web_accessible_resources in the manifest). */
-@font-face{font-family:"Clover Unbounded";font-weight:800;font-display:swap;src:url("fonts/Unbounded-800.woff2") format("woff2")}
-@font-face{font-family:"Clover Manrope";font-weight:500;font-display:swap;src:url("fonts/Manrope-500.woff2") format("woff2")}
-@font-face{font-family:"Clover Manrope";font-weight:700;font-display:swap;src:url("fonts/Manrope-700.woff2") format("woff2")}
-@font-face{font-family:"Clover Manrope";font-weight:800;font-display:swap;src:url("fonts/Manrope-800.woff2") format("woff2")}
+   so it never fights the shop's own styles. System fonts only: this sheet
+   lands on every page you visit, so it must not make any page download
+   anything. */
 
 .clover-badge {
   --spring: #86EFAC;
@@ -26,8 +23,8 @@
   --mesh-mid: #0E3B24;
   --mesh-bottom: #1D8A4E;
   --panel-bg: rgba(255,255,255,.9);
-  --font: "Clover Manrope", "Avenir Next", "Segoe UI", system-ui, sans-serif;
-  --display: "Clover Unbounded", "Avenir Next", system-ui, sans-serif;
+  --font: "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --display: "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
 
   position: fixed;
   right: 20px;
