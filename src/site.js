@@ -155,6 +155,14 @@ async function cloudAddCode(row){
   }catch(e){}
   return null;
 }
+// Clover's own checker (agent/): the day it ran a code through a cart and
+// what happened. Worth something, never green: that stays a person's call.
+function checkerOnto(c, cc){
+  if(!cc.checker_at) return;
+  const t = Date.parse(cc.checker_at);
+  if(isNaN(t)) return;
+  c.bot = t; c.botResult = cc.checker_result || null; c.botNote = cc.checker_note || "";
+}
 async function cloudReconcile(list){
   let cloud;
   try{ cloud = await cloudFetchCodes(); }catch(e){ return false; }
@@ -168,6 +176,7 @@ async function cloudReconcile(list){
       c.sid = cc.id; c.up = cc.works || 0; c.down = cc.fails || 0;
       if(c.own){ const m = mine.find(x=>codeId(x.store,x.code) === c.id); if(m && m.sid !== cc.id){ m.sid = cc.id; saveMine(); } }
       if(cc.last_ok && !(c.lastOk > cc.last_ok)) c.lastOk = cc.last_ok;
+      checkerOnto(c, cc);
     }
   });
   cloud.forEach(cc=>{
@@ -177,6 +186,7 @@ async function cloudReconcile(list){
         note:cc.label || "", limits:cc.detail || "", cat:"other", country:"XX",
         by:"Clover", single:undefined, bot:null, testedOn:null, exp:null,
         up:cc.works || 0, down:cc.fails || 0, at:Date.now(), lastOk:cc.last_ok || null, cloud:true });
+      checkerOnto(list[list.length-1], cc);
     }
   });
   cloudSynced = true;
@@ -347,7 +357,8 @@ function sortCodes(list){
       return (b.lastOk||0)-(a.lastOk||0);
     }
     if(ta === 1){
-      if(!!b.bot !== !!a.bot) return (b.bot?1:0)-(a.bot?1:0);
+      const bs = (c)=> c.botResult === "ok" ? 2 : c.bot && c.botResult === "fail" ? 0 : 1;
+      if(bs(b) !== bs(a)) return bs(b)-bs(a);
       const w = worth(b)-worth(a); if(w) return w;
       return b.at-a.at;
     }
@@ -365,12 +376,19 @@ function okLine(c){
     // come in, that day is history and would only contradict "today"
     const sameDay = c.testedOn && Math.abs(Date.parse(c.testedOn+"T12:00:00")-c.lastOk) < 36*3600000;
     const on = sameDay ? new Date(c.testedOn+"T12:00:00").toLocaleDateString(undefined,{day:"numeric",month:"short"}) : null;
-    return `<span class="proof${days>30?" stale":""}" title="${on ? "Tested on "+esc(on) : "Tested by a person"}">a person tested this, worked ${when}${on ? " ("+esc(on)+")" : ""}</span>`;
+    let line = `<span class="proof${days>30?" stale":""}" title="${on ? "Tested on "+esc(on) : "Tested by a person"}">a person tested this, worked ${when}${on ? " ("+esc(on)+")" : ""}</span>`;
+    if(c.bot && c.bot > c.lastOk){
+      const bd = Math.max(0, Math.floor((Date.now()-c.bot)/86400000));
+      const bw = bd === 0 ? "today" : bd === 1 ? "yesterday" : bd+" days ago";
+      line += ` <span class="botcheck${c.botResult === "fail" ? " botfail" : ""}" title="${esc(c.botNote||"")}">checker ${bw}: ${c.botResult === "ok" ? "worked" : c.botResult === "fail" ? "the shop said no" : "no clear answer"}</span>`;
+    }
+    return line;
   }
   if(c.bot){
     const days = Math.max(0, Math.floor((Date.now()-c.bot)/86400000));
     const when = days === 0 ? "today" : days === 1 ? "yesterday" : days+" days ago";
-    return `<span class="botcheck" title="Clover's own checker put this code through a cart automatically. Useful, but a machine can miss what a person would catch, so it does not turn green.">Clover's checker ran this ${when}</span>`;
+    const what = c.botResult === "ok" ? "it worked" : c.botResult === "fail" ? "the shop said no" : "no clear answer";
+    return `<span class="botcheck${c.botResult === "fail" ? " botfail" : ""}" title="Clover's own checker put this code through a real cart automatically${c.botNote ? ": "+esc(c.botNote) : ""}. Useful, but a machine can miss what a person would catch, so it does not turn green.">Clover's checker ran this ${when}, ${what}</span>`;
   }
   if(reports === 0) return `<span class="untested">nobody has tried it yet</span>`;
   return "";

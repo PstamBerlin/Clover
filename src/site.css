@@ -289,6 +289,7 @@ body.dark .oneuse{color:#C4B5FD;background:rgba(109,40,217,.25);border-color:rgb
 .proof{color:var(--spring-deep);font-weight:700}
 .proof.stale{color:var(--ink-dim)}
 .botcheck{font-weight:700;color:var(--amber-ink);cursor:help}
+.botcheck.botfail{color:var(--coral)}
 .untested{font-weight:700;color:var(--amber-ink)}
 .votes{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
 .vote{
