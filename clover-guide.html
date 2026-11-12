@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How Clover works</title>
+<meta name="description" content="What everything on Clover means, how to use it, and what it will never do behind your back.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cg fill='%2386EFAC'%3E%3Cpath d='M50 50 C50 34 40 24 30 28 C20 32 20 46 32 50 C40 53 46 53 50 50Z'/%3E%3Cpath d='M50 50 C66 50 76 40 72 30 C68 20 54 20 50 32 C47 40 47 46 50 50Z'/%3E%3Cpath d='M50 50 C50 66 60 76 70 72 C80 68 80 54 68 50 C60 47 54 47 50 50Z'/%3E%3Cpath d='M50 50 C34 50 24 60 28 70 C32 80 46 80 50 68 C53 60 53 54 50 50Z'/%3E%3C/g%3E%3C/svg%3E">
+<style>
+/* The Clover guide, in the same look as the site: Clover's greens in the
+   grammar of the Aurora look. Fonts ship in fonts/ (SIL Open Font License). */
+@font-face{font-family:"Manrope";font-style:normal;font-weight:500;font-display:swap;src:url("fonts/Manrope-500.woff2") format("woff2")}
+@font-face{font-family:"Manrope";font-style:normal;font-weight:700;font-display:swap;src:url("fonts/Manrope-700.woff2") format("woff2")}
+@font-face{font-family:"Manrope";font-style:normal;font-weight:800;font-display:swap;src:url("fonts/Manrope-800.woff2") format("woff2")}
+@font-face{font-family:"Unbounded";font-style:normal;font-weight:800;font-display:swap;src:url("fonts/Unbounded-800.woff2") format("woff2")}
+:root{
+  --ink:#0B2A1B; --ink-dim:#4F6B5B; --ink-faint:#7E9789;
+  --bg:#F3FBF5; --panel:#FFFFFF; --line:#D4ECDC; --line-strong:#B9DEC7;
+  --spring:#86EFAC; --spring-deep:#15803D; --pine:#0B2A1B;
+  --butter:#FDE68A; --butter-ink:#1A2E12; --coral:#E11D48;
+  --amber-ink:#8A6A05; --amber-soft:#FFF6DD; --amber-line:#F0E2B8;
+  --lilac:#6D28D9; --lilac-soft:#EDE9FE; --lilac-line:#DDD6FE;
+  --edge-a:#4ADE80; --edge-b:#2DD4BF;
+  --frost:rgba(255,255,255,.72); --frost-blur:26px; --glass-line:rgba(255,255,255,.65);
+  --mesh-top:#07160F; --mesh-mid:#0E3B24; --mesh-bottom:#1D8A4E;
+  --font:"Manrope","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --display:"Unbounded","Avenir Next",system-ui,sans-serif;
+  --mono:"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --ink:#ECF7EE; --ink-dim:#A3C3B1; --ink-faint:#7EA38F;
+    --bg:#07160F; --panel:#0F2117; --line:rgba(134,239,172,.2); --line-strong:rgba(134,239,172,.38);
+    --spring-deep:#86EFAC; --pine:#07160F; --coral:#FDA4AF;
+    --amber-ink:#FDE68A; --amber-soft:rgba(253,230,138,.12); --amber-line:rgba(253,230,138,.3);
+    --lilac:#C4B5FD; --lilac-soft:rgba(109,40,217,.25); --lilac-line:rgba(196,181,253,.3);
+    --frost:rgba(9,26,18,.55); --glass-line:rgba(134,239,172,.22);
+  }
+}
+*{box-sizing:border-box}
+html{background:var(--bg);scroll-behavior:smooth}
+body{margin:0;color:var(--ink);font-family:var(--font);font-weight:500;line-height:1.55;background:linear-gradient(90deg,#E9F7EE 0%,#F3FBF5 48%,#FFF6DF 100%) fixed}
+@media (prefers-color-scheme:dark){
+  body{background:
+    radial-gradient(60% 55% at 14% 92%, rgba(134,239,172,.55) 0%, rgba(134,239,172,0) 60%),
+    radial-gradient(55% 50% at 86% 88%, rgba(45,212,191,.42) 0%, rgba(45,212,191,0) 60%),
+    linear-gradient(180deg, var(--mesh-top) 0%, var(--mesh-mid) 42%, var(--mesh-bottom) 100%) fixed}
+}
+a{color:var(--spring-deep);font-weight:700}
+h1,h2,h3{font-family:var(--display);letter-spacing:-.02em;font-weight:800}
+h2{font-size:1.5rem;margin:0 0 10px;line-height:1.15}
+h3{font-size:1rem;margin:22px 0 6px}
+p{margin:0 0 12px}
+ul,ol{margin:0 0 12px;padding-left:22px}
+li{margin-bottom:6px}
+code{font-family:var(--mono);font-size:.86em;background:var(--pine);color:var(--spring);padding:1px 6px;border-radius:5px}
+.eyebrow{font-size:.7rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--spring-deep);margin:0 0 6px}
+
+/* the mesh hero */
+.hero{position:relative;overflow:hidden;color:#ECF7EE;padding:56px 20px 64px;text-align:center;
+  background:
+    radial-gradient(60% 55% at 14% 100%, rgba(134,239,172,.6) 0%, rgba(134,239,172,0) 60%),
+    radial-gradient(55% 50% at 86% 96%, rgba(45,212,191,.45) 0%, rgba(45,212,191,0) 60%),
+    linear-gradient(180deg, var(--mesh-top) 0%, var(--mesh-mid) 48%, var(--mesh-bottom) 100%)}
+.hero::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.16;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E")}
+.hero-in{position:relative;z-index:1;max-width:720px;margin:0 auto}
+.back{display:inline-flex;align-items:center;gap:6px;margin-bottom:22px;padding:7px 14px;border-radius:999px;color:#ECF7EE;text-decoration:none;font-size:.82rem;
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+.back:hover{background:rgba(255,255,255,.18)}
+.mark{width:64px;height:64px;display:block;margin:0 auto 10px;filter:drop-shadow(0 8px 20px rgba(0,0,0,.25))}
+.hero h1{margin:0 0 8px;font-size:clamp(1.9rem,6vw,3rem);color:#fff;line-height:1.05}
+.hero .sub{margin:0 auto;max-width:520px;color:rgba(236,247,238,.84);font-size:1.02rem}
+.stamp{display:inline-block;margin-top:16px;padding:7px 16px;border-radius:999px;font-size:.76rem;font-weight:700;letter-spacing:.03em;color:var(--butter);border:1px solid rgba(253,230,138,.55);background:rgba(253,230,138,.08)}
+
+/* layout */
+.wrap{max-width:760px;margin:0 auto;padding:0 20px 60px}
+.toc{position:relative;z-index:2;margin:-36px auto 36px;padding:18px 22px;border-radius:16px;background:var(--frost);border:1px solid var(--glass-line);
+  -webkit-backdrop-filter:blur(var(--frost-blur)) saturate(1.5);backdrop-filter:blur(var(--frost-blur)) saturate(1.5);box-shadow:0 18px 40px rgba(7,22,15,.18),inset 0 1px 0 rgba(255,255,255,.5)}
+.toc-title{margin:0 0 8px;font-size:.7rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--spring-deep)}
+.toc ol{margin:0;padding-left:0;list-style:none;columns:2;column-gap:24px;font-size:.9rem}
+.toc li{break-inside:avoid;margin-bottom:4px}
+.toc a{text-decoration:none;color:var(--ink);font-weight:600}
+.toc a:hover{color:var(--spring-deep)}
+section{margin-bottom:44px;scroll-margin-top:20px}
+.card,.tip,.demo{background:var(--frost);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin:0 0 12px;
+  -webkit-backdrop-filter:blur(var(--frost-blur)) saturate(1.4);backdrop-filter:blur(var(--frost-blur)) saturate(1.4);box-shadow:inset 0 1px 0 var(--glass-line)}
+.card p:last-child,.tip p:last-child{margin-bottom:0}
+.tip{border-color:var(--amber-line);background:var(--amber-soft)}
+.tip p{color:var(--amber-ink);font-weight:700}
+.note{font-size:.84rem;color:var(--ink-dim)}
+
+/* the demo card: the same card as the site */
+.demo.codecard{display:flex;align-items:center;gap:14px;margin:14px 0 18px}
+.score{flex-shrink:0;width:52px;text-align:center}
+.score small{display:block;font-size:.58rem;letter-spacing:.08em;text-transform:uppercase;font-weight:800;color:var(--ink-faint);margin-top:2px}
+.ring{position:relative;width:44px;height:44px;margin:0 auto}
+.ring svg{display:block;transform:rotate(-90deg)}
+.ring .track{stroke:var(--line-strong)}
+.ring .fill{stroke:var(--spring-deep)}
+.ring .num{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:.72rem}
+.favicon-demo{width:30px;height:30px;border-radius:8px;flex-shrink:0;display:grid;place-items:center;background:#6D28D9;color:#fff;font-weight:800;font-size:.95rem}
+.code-main{flex:1;min-width:0}
+.code-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+.code-store{font-weight:800;font-size:.98rem}
+.flag{border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:.62rem;letter-spacing:.06em;font-weight:700;color:var(--ink-dim)}
+.pill{display:inline-block;font-family:var(--mono);font-size:.82rem;font-weight:600;padding:4px 11px;border-radius:9px;background:var(--pine);color:var(--spring)}
+.code-note{margin:6px 0 0;font-size:.92rem}
+.limits{display:inline-block;margin-top:4px;font-size:.72rem;padding:2px 8px;border-radius:6px;color:var(--amber-ink);background:var(--amber-soft);border:1px solid var(--amber-line)}
+.code-meta{display:flex;flex-wrap:wrap;gap:6px 8px;margin-top:7px;font-size:.7rem;color:var(--ink-faint)}
+.proof{color:var(--spring-deep);font-weight:800}
+.untested{color:var(--amber-ink);font-weight:800}
+.botcheck{color:var(--amber-ink);font-weight:800}
+.oneuse{font-size:.62rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border-radius:5px;color:var(--lilac);background:var(--lilac-soft);border:1px solid var(--lilac-line)}
+.votes{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+.vote{padding:6px 11px;border-radius:10px;font-size:.74rem;font-weight:800;white-space:nowrap;border:1px solid var(--line);background:var(--frost);color:var(--ink-dim)}
+.vote.up{border-color:var(--edge-a);color:var(--spring-deep)}
+.vote.down{border-color:rgba(225,29,72,.4);color:var(--coral)}
+.rowdemo{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border-radius:999px;border:1.5px solid var(--line);background:var(--frost);color:var(--ink-dim);font-size:.78rem;font-weight:700}
+.chip b{font-size:.68rem;opacity:.75}
+.chip.on{color:var(--spring);border-color:transparent;background:linear-gradient(var(--pine),var(--pine)) padding-box,linear-gradient(90deg,var(--edge-a),var(--edge-b)) border-box}
+.chip.off{opacity:.45;border-style:dashed}
+.swatches{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:0 0 14px}
+.sw{padding:14px 12px;border-radius:12px;color:#fff;font-weight:800;font-size:.9rem}
+.sw span{display:block;font-weight:600;font-size:.72rem;opacity:.85;margin-top:3px;line-height:1.3}
+footer{text-align:center;padding:30px 20px 40px;font-size:.84rem;color:var(--ink-dim)}
+@media (max-width:600px){
+  .toc ol{columns:1}
+  .demo.codecard{flex-wrap:wrap}
+  .votes{flex-direction:row;width:100%;justify-content:flex-end}
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-in">
+    <a class="back" href="index.html">← back to Clover</a>
+    <svg class="mark" viewBox="0 0 100 100" aria-hidden="true">
+      <g fill="#86EFAC">
+        <path d="M50 50 C50 34 40 24 30 28 C20 32 20 46 32 50 C40 53 46 53 50 50Z"/>
+        <path d="M50 50 C66 50 76 40 72 30 C68 20 54 20 50 32 C47 40 47 46 50 50Z"/>
+        <path d="M50 50 C50 66 60 76 70 72 C80 68 80 54 68 50 C60 47 54 47 50 50Z"/>
+        <path d="M50 50 C34 50 24 60 28 70 C32 80 46 80 50 68 C53 60 53 54 50 50Z"/>
+      </g>
+      <circle cx="50" cy="50" r="6" fill="#07160F"/>
+    </svg>
+    <h1>How Clover works</h1>
+    <p class="sub">What everything on the page means, how to use it, and what it will never do behind your back.</p>
+    <p class="stamp">Coupon codes people actually tested</p>
+  </div>
+</div>
+
+<div class="wrap">
+
+<nav class="toc">
+  <p class="toc-title">What is in here</p>
+  <ol>
+    <li><a href="#idea">1. The one idea</a></li>
+    <li><a href="#card">2. What is on a code card</a></li>
+    <li><a href="#badges">3. The three lines</a></li>
+    <li><a href="#number">4. How the number is worked out</a></li>
+    <li><a href="#voting">5. Saying whether it worked</a></li>
+    <li><a href="#filters">6. Search and filters</a></li>
+    <li><a href="#order">7. Why codes are in the order they are</a></li>
+    <li><a href="#colours">8. What the colours tell you</a></li>
+    <li><a href="#adding">9. Putting a code in yourself</a></li>
+    <li><a href="#creators">10. Deals and referral links</a></li>
+    <li><a href="#extension">11. Clover at the checkout</a></li>
+    <li><a href="#rest">12. The other sections</a></li>
+    <li><a href="#never">13. What Clover never does</a></li>
+    <li><a href="#honest">14. What Clover is not good at</a></li>
+  </ol>
+</nav>
+
+<main>
+
+  <section id="idea">
+    <p class="eyebrow">Start here</p>
+    <h2>The one idea</h2>
+    <p>Every other coupon site competes on how many codes it holds. Clover competes on knowing which ones still work. That is the whole design. Codes are visible without clicking anything, they carry a count of who they actually worked for, and dead ones take themselves off the list.</p>
+    <p>There is no account. Nothing is uploaded except the votes and codes you choose to share. You can read the entire thing, because the site is one file.</p>
+  </section>
+
+  <section id="card">
+    <p class="eyebrow">Reading a code</p>
+    <h2>What is on a code card</h2>
+    <div class="demo codecard">
+      <div class="score">
+        <div class="ring">
+          <svg width="44" height="44" viewBox="0 0 44 44">
+            <circle class="track" cx="22" cy="22" r="19" fill="none" stroke-width="4"/>
+            <circle class="fill" cx="22" cy="22" r="19" fill="none" stroke-width="4" stroke-dasharray="119.4" stroke-dashoffset="0"/>
+          </svg>
+          <div class="num" style="font-size:.62rem">high</div>
+        </div>
+        <small>worked</small>
+      </div>
+      <span class="favicon-demo">E</span>
+      <div class="code-main">
+        <div class="code-top">
+          <b class="code-store">elegoo.com</b>
+          <span class="pill">IME20</span>
+        </div>
+        <p class="code-note">20 dollars off</p>
+        <div class="limits">Confirmed working, a flat amount rather than a percentage</div>
+        <div class="code-meta">
+          <span class="flag">Anywhere</span>
+          <span class="flag">Hobby and making</span>
+          <span class="proof">a person tested this, worked 98 days ago (Aug 6)</span>
+          <span>1 report</span>
+          <span>added by Clover</span>
+        </div>
+      </div>
+      <div class="votes">
+        <span class="vote up">Worked</span>
+        <span class="vote down">Nope</span>
+      </div>
+    </div>
+    <h3>The pieces</h3>
+    <ul>
+      <li><b>The shop</b> at the top, with a small mark drawn from its name. Tap it to see every code for that shop.</li>
+      <li><b>The code itself</b> in the dark pill. Tap to copy. It turns yellow for a moment so you know it took.</li>
+      <li><b>What it does</b>, in plain words. Dollars off, percent off, free shipping.</li>
+      <li><b>The catch</b>, underneath in the amber box. Minimum spend, members only, one shop only, app only. If a code has a restriction, it is written down rather than left for you to discover at checkout.</li>
+      <li><b>The tags</b>: the region (Anywhere, EU wide, United States) and the kind of shop.</li>
+      <li><b>The ring</b> on the left, showing how often it has worked, and the two buttons on the right to say what happened for you.</li>
+    </ul>
+    <div class="tip"><p>After you copy a code, Clover asks whether it worked. Answering takes one tap and it is the entire reason the list is any good.</p></div>
+  </section>
+
+  <section id="badges">
+    <p class="eyebrow">Trust</p>
+    <h2>The three lines, and what they really mean</h2>
+    <div class="card">
+      <p><span class="proof">a person tested this, worked 12 days ago</span></p>
+      <p style="margin-top:10px">Somebody put this code in a real cart and watched the total drop. This is the only line that means a human checked, and it says when. It is a small number of codes and it grows one cart at a time.</p>
+    </div>
+    <div class="card">
+      <p><span class="botcheck">Clover's checker ran this 3 days ago</span></p>
+      <p style="margin-top:10px">Clover's own checker put the code through a cart automatically. Worth something, but a machine can miss what a person would catch, so it sits below a real person and above nothing, and it never turns green. Other coupon sites badge codes their own software checked, and Clover does not repeat those, because someone else's badge is their marketing rather than evidence.</p>
+    </div>
+    <div class="card">
+      <p><span class="untested">nobody has tried it yet</span></p>
+      <p style="margin-top:10px">Copied from a public listing because it was posted or used recently. No claim at all is being made about it. Try it and tell everyone what happened.</p>
+    </div>
+  </section>
+
+  <section id="number">
+    <p class="eyebrow">The ring</p>
+    <h2>How the number is worked out</h2>
+    <p>The ring shows the share of people a code worked for. But under three reports it shows a word instead of a number, because two people is not a percentage.</p>
+    <ul>
+      <li><b>high</b>, <b>mixed</b>, <b>low</b> — fewer than three reports</li>
+      <li><b>67%</b> — three or more reports, so the number means something</li>
+      <li><b>1x</b> — a one-use code, kept out of scoring entirely</li>
+      <li><b>—</b> — nobody has reported yet</li>
+    </ul>
+    <p>You will never see 100% or 0% off a single vote. The same rule holds for the big "Working" number at the top of the site: it only becomes a percentage once five codes each have three or more reports, and says "early" until then. A code that falls below 40% with at least four votes retires itself and disappears from the list, though you can still see it by ticking <i>show retired and expired</i>. It stays visible on purpose: knowing somebody tried it and it failed is worth more than the code quietly vanishing.</p>
+  </section>
+
+  <section id="voting">
+    <p class="eyebrow">Voting</p>
+    <h2>Saying whether it worked</h2>
+    <div class="rowdemo"><span class="vote up">Worked</span><span class="vote down">Nope</span></div>
+    <p>One vote per code per device. Tapping the same button again takes your vote back. Tapping the other one moves it. There is no account, so this is honour-system with a small lock on it, and that is a deliberate trade for not asking you to sign up. Your first vote on a code also goes to the shared list, so everyone sees the tally move.</p>
+    <p><b>Check the total, not the box.</b> Some shops accept a code and take nothing off, or apply it to one item only. That is still a no.</p>
+  </section>
+
+  <section id="filters">
+    <p class="eyebrow">Finding things</p>
+    <h2>Search and filters</h2>
+    <p>Search matches the shop, the code and the description. Below it are three rows of filter chips: store, kind and region.</p>
+    <div class="rowdemo">
+      <span class="chip on">All <b>224</b></span>
+      <span class="chip">fanatics.com <b>19</b></span>
+      <span class="chip">elegoo.com <b>9</b></span>
+      <span class="chip off">nespresso.com <b>0</b></span>
+    </div>
+    <p>Every chip carries a live count showing what you would get with your other filters already applied. A chip that would leave you with nothing goes faint and stops responding, so you cannot walk into an empty page by accident. If you land on one anyway, the message names which filters caused it and gives you one button to clear them all.</p>
+    <p>The store row shows the seven busiest with a <b>more</b> chip for the rest.</p>
+  </section>
+
+  <section id="order">
+    <p class="eyebrow">Order</p>
+    <h2>Why codes are in the order they are</h2>
+    <ol>
+      <li><b>Worked for people</b>, best rate first, then biggest discount, then most recently confirmed.</li>
+      <li><b>Untested</b>, with anything Clover's checker ran first, then biggest discount, because that is the only signal there is before anyone has tried.</li>
+      <li><b>Failed</b>, least bad first, at the bottom.</li>
+    </ol>
+    <p>So the thing most worth trying is always at the top, and the list quietly improves as people report back.</p>
+  </section>
+
+  <section id="colours">
+    <p class="eyebrow">Colours</p>
+    <h2>What the colours tell you</h2>
+    <div class="swatches">
+      <div class="sw" style="background:#15803D">Green<span>codes and anything that worked</span></div>
+      <div class="sw" style="background:#FDE68A;color:#1A2E12">Butter<span>the one thing to do next: a button, a copied code</span></div>
+      <div class="sw" style="background:#8A6A05">Amber<span>the catch on a code, and things nobody has checked</span></div>
+      <div class="sw" style="background:#6D28D9">Purple<span>limited, one-use codes</span></div>
+      <div class="sw" style="background:#E11D48">Coral<span>failed, retired, delete</span></div>
+      <div class="sw" style="background:#07160F">Pine<span>the header and the code pills</span></div>
+    </div>
+    <p>Dark mode is the same mesh running the whole page rather than an inversion. It follows your system on the first visit and remembers whatever you choose after that, on that device only.</p>
+  </section>
+
+  <section id="adding">
+    <p class="eyebrow">Adding</p>
+    <h2>Putting a code in yourself</h2>
+    <ol>
+      <li>Open <b>Add a code that worked</b>.</li>
+      <li>Store and code are the only things required.</li>
+      <li>Write the catch in the restrictions box if there is one. This is the most useful field on the form.</li>
+      <li><b>Runs out on, if you know</b> is optional. Leave it blank rather than guessing, a made-up date is worse than none.</li>
+      <li>Your name is optional. Put one in and you appear on the contributor board.</li>
+    </ol>
+    <p>The code goes into the shared list straight away, and the page jumps to that store so you can see it. You can edit or delete anything you added. Editing keeps the votes. Deleting asks twice.</p>
+    <div class="tip"><p>Delete a code only if it never existed, like a typo. If it existed and simply stopped working, vote it down instead. A retired code stops the next person adding it back.</p></div>
+  </section>
+
+  <section id="creators">
+    <p class="eyebrow">Creators</p>
+    <h2>Deals and referral links</h2>
+    <p><b>Creator deals</b> are codes and links that belong to somebody who made something, and using them sends the credit to them. They live under "Behind a link" in the Why section. Clover never swaps one in for you and takes nothing from it.</p>
+    <p><b>Referral links</b> sit in the same place. Anyone can add one, but only if they say what the person clicking gets. A link with nothing in it for you is just commission farming and the form refuses to save it. When several people have a link for the same shop, Clover picks one at random each visit rather than always showing whoever got there first. These stay in your own browser.</p>
+    <p><b>Limited codes</b> wear a purple <span class="oneuse">limited</span> badge. These are one-use or first-order codes. They are excluded from every score, because a one-use code failing for the next person is expected rather than evidence of anything.</p>
+  </section>
+
+  <section id="extension">
+    <p class="eyebrow">The extension</p>
+    <h2>Clover at the checkout</h2>
+    <p><b>Chrome, Edge, Brave, Opera.</b> Download from the button on the main page, unzip it, open <code>chrome://extensions</code>, turn on developer mode, and choose <b>Load unpacked</b>.</p>
+    <p><b>Firefox on a computer.</b> Swap <code>manifest-firefox.json</code> in as <code>manifest.json</code> first, then load it the same way from <code>about:debugging</code>.</p>
+    <p><b>Firefox on Android.</b> This does work, with some setting up. Use <code>manifest-android.json</code> as <code>manifest.json</code>, because Mozilla still recommends the older extension format for phones. Then the extension has to be signed by Mozilla and put in a collection, since Android Firefox cannot install from a file the way a computer can:</p>
+    <ol>
+      <li>Make a Firefox account and go to the add-ons site.</li>
+      <li>Submit the extension there to get it signed. Choose the unlisted option if it is only for you.</li>
+      <li>Make a collection, add Clover to it, and note the collection name and the user id number in the address bar.</li>
+      <li>On the phone, open Firefox settings, go to About Firefox, and tap the logo five times to turn on the debug menu.</li>
+      <li>Back in settings, under Advanced, tap <b>Custom Add-on collection</b> and put in that user id and collection name. Firefox will restart.</li>
+      <li>Open Add-ons and Clover will be there to install.</li>
+    </ol>
+    <h3>What it does at a checkout</h3>
+    <ol>
+      <li>Finds the promo code box on the page, opening the "add a discount" section if the shop hides it.</li>
+      <li>Types in each code it knows for that shop, one at a time, and watches the order total.</li>
+      <li>Tries every code, then applies the winners together where the shop lets codes stack.</li>
+      <li>Tells you what it saved, and asks whether it worked so the tally stays honest.</li>
+    </ol>
+    <h3>The clover in the corner</h3>
+    <p>It has four faces. Idle while waiting, looking while it works, happy when something lands, and sad when nothing does. A little bubble underneath says exactly which code it is trying, so you can watch it work rather than trust it.</p>
+    <h3>It stays quiet if somebody sent you</h3>
+    <p>If the address of the page carries a referral tag, the extension does nothing at all. Somebody already earned the credit for that visit and it is not Clover's to take. This is the single most important line of code in the whole project.</p>
+    <h3>Settings</h3>
+    <p>Right click the extension and choose options, or tap Settings at the bottom of the popup. Everything saves as you change it, there is no save button. You can turn the whole thing off, hide the clover, move it to another corner, make it try codes without asking, change how long it waits between codes, block it from certain shops or allow it on only a few, switch the theme, turn off the mascot or the confetti, and hide creator deals.</p>
+  </section>
+
+  <section id="rest">
+    <p class="eyebrow">The rest of the page</p>
+    <h2>The other sections</h2>
+    <ul>
+      <li><b>Stores</b> — every shop with its live code count and best current code. Tap one to see its codes.</li>
+      <li><b>The wanted board</b>, under the stores — ask for a shop nobody has covered. When somebody adds a code for it, the row turns green and links straight to it. The board lives in your browser.</li>
+      <li><b>Why</b> — where the codes come from, the Honey story, what was found, how Clover compares (including the rows it loses), creator deals and referral links, and the contributors. Contributors get two scores, one for how many codes somebody added and one for how many of them worked, so nobody wins by dumping dead codes. The starter codes are not ranked.</li>
+      <li><b>Always on</b> — student schemes and standing offers that need no code hunting.</li>
+      <li><b>Get the extension</b> — the download, the install steps, and the sync file that carries this page's working codes into the extension.</li>
+    </ul>
+  </section>
+
+  <section id="never">
+    <p class="eyebrow">Privacy</p>
+    <h2>What Clover never does</h2>
+    <ul>
+      <li>No account, ever.</li>
+      <li>No analytics, no tracking. The only thing that leaves your browser is a vote or a code you chose to share, and that is sent without a name.</li>
+      <li>Nothing else is fetched from anywhere while you read the page. The fonts ship with the site. Even the little shop marks are drawn on your machine from the shop name, because asking an icon service for them would tell that service every shop you looked at.</li>
+      <li>The extension reads the checkout page you are already on, looks at the promo box and the total, and stops there. Not your cart, not your details, not where else you have been.</li>
+      <li>It never adds a referral link, and never replaces one.</li>
+      <li>No cashback. Earning cashback means attaching a tracking tag to your purchase, which is the exact thing Clover was built to be the opposite of.</li>
+    </ul>
+    <p class="note">Everything above can be checked. The site is one file and the extension is a handful of small ones, all readable.</p>
+  </section>
+
+  <section id="honest">
+    <p class="eyebrow">Honestly</p>
+    <h2>What Clover is not good at</h2>
+    <p>No automatic daily rechecking yet, so codes go stale until a person reports. No price history, so it cannot tell you whether a sale is real. The extension fills codes properly on a few shops and guesses on the rest. No phone extension without the setup above. A few dozen shops against competitors with hundreds of thousands. And one person runs it.</p>
+    <p>All of that is written into the comparison table on the main page on purpose. A chart where one side wins everything is not worth reading.</p>
+  </section>
+
+</main>
+</div>
+
+<footer>
+  <p><a href="index.html">Clover</a> · codes people actually tested</p>
+</footer>
+
+</body>
+</html>

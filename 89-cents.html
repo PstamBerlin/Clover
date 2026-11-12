@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>89 Cents — what Honey did</title>
+<style>
+:root{
+  /* Honey's own colours, taken from PayPal's published brand guide.
+     Product orange F26C25, joyful orange FF8B4E, wordmark orange FF7F22,
+     on PayPal slate 001435. The record of what they did, in their palette. */
+  --pine:#001435; --pine-soft:#2a3550; --spring:#FF8B4E; --spring-deep:#F26C25;
+  --spring-pale:#ffd9c0; --mist:#fdf4ee; --paper:#ffffff; --gold:#FF7F22;
+  --muted:#7a7f8f; --line:#f2ddcd; --coral:#c0392b;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--mist); color:var(--pine);
+  font-family:"Avenir Next","Century Gothic",Futura,"Trebuchet MS",sans-serif;
+  font-size:16px; line-height:1.65; -webkit-font-smoothing:antialiased;
+}
+::selection{background:var(--spring)}
+a{color:var(--spring-deep)}
+
+.hero{
+  background:linear-gradient(160deg,#000d24,var(--pine) 55%,#0b2a55);
+  color:var(--spring-pale); padding:58px 22px 46px;
+}
+.hero-in{max-width:760px;margin:0 auto}
+.back{
+  display:inline-block; font-size:.78rem; font-weight:700; color:var(--spring);
+  text-decoration:none; margin-bottom:20px; opacity:.9;
+}
+.back:hover{text-decoration:underline}
+h1{font-size:clamp(2.1rem,6vw,3.1rem);line-height:1.1;margin:0 0 12px;color:#fff}
+.sub{margin:0;color:#c9b09a;font-size:1.02rem;max-width:56ch}
+
+.credit{
+  max-width:760px;margin:-22px auto 0;padding:0 22px;
+}
+.credit-in{
+  background:var(--paper);border-left:5px solid var(--gold);
+  border-radius:14px;padding:16px 18px;
+  box-shadow:0 6px 22px rgba(0,20,53,.13);
+}
+.credit-in p{margin:0;font-size:.88rem;color:var(--pine-soft)}
+.credit-in p + p{margin-top:8px}
+
+main{max-width:760px;margin:0 auto;padding:40px 22px 80px}
+section{margin-bottom:44px}
+.eyebrow{
+  font-size:.62rem;font-weight:800;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--spring-deep);margin:0 0 6px;
+}
+h2{font-size:1.42rem;margin:0 0 4px;line-height:1.25}
+.when{font-size:.76rem;font-weight:700;color:var(--muted);margin:0 0 14px}
+p{margin:0 0 13px}
+.card{
+  background:var(--paper);border-radius:16px;padding:18px 20px;
+  box-shadow:0 2px 10px rgba(0,20,53,.07);margin-bottom:12px;
+}
+.card h3{margin:0 0 6px;font-size:1rem}
+.card p{margin:0;font-size:.9rem;color:var(--pine-soft)}
+.card p + p{margin-top:8px}
+.num{
+  display:inline-block;min-width:26px;height:26px;line-height:26px;
+  text-align:center;border-radius:50%;background:var(--spring-pale);
+  color:var(--pine);font-size:.74rem;font-weight:800;margin-right:8px;
+}
+.quote{
+  border-left:4px solid var(--spring-deep);padding:2px 0 2px 15px;
+  margin:14px 0;font-size:.92rem;color:var(--pine-soft);
+}
+.figures{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0}
+.fig{background:var(--paper);border-radius:14px;padding:15px 16px;box-shadow:0 2px 10px rgba(0,20,53,.07)}
+.fig b{display:block;font-size:1.5rem;color:var(--spring-deep);line-height:1.15}
+.fig span{font-size:.74rem;color:var(--muted)}
+.sources{background:var(--paper);border-radius:16px;padding:18px 20px;box-shadow:0 2px 10px rgba(0,20,53,.07)}
+.sources li{font-size:.86rem;margin-bottom:7px;color:var(--pine-soft)}
+.note{font-size:.8rem;color:var(--muted)}
+footer{background:var(--pine);color:#a8b0c2;text-align:center;padding:32px 22px;font-size:.78rem}
+footer a{color:var(--spring)}
+@media(max-width:560px){
+  .hero{padding:44px 16px 38px}
+  main{padding:34px 16px 60px}
+  .credit{padding:0 16px}
+}
+
+/* keep blocks whole when this becomes a pdf */
+.card, .fig, .quote, .credit-in, .sources{
+  page-break-inside:avoid; break-inside:avoid;
+}
+section{page-break-inside:auto}
+h2, .eyebrow, .when{page-break-after:avoid; break-after:avoid}
+.figures{page-break-inside:avoid; break-inside:avoid}
+@media print{
+  body{background:#fff}
+  .hero{-webkit-print-color-adjust:exact; print-color-adjust:exact}
+  .card,.fig,.credit-in,.sources{box-shadow:none;border:1px solid var(--line)}
+  .back{display:none}
+}
+
+@media print{
+  body{background:#fff}
+  .card,.fig,.quote,.sources,.credit-in{page-break-inside:avoid;break-inside:avoid}
+  section{page-break-inside:auto}
+  h2,h3{page-break-after:avoid;break-after:avoid}
+  .eyebrow{page-break-after:avoid}
+  .hero{page-break-after:avoid}
+  .figures{page-break-inside:avoid;break-inside:avoid}
+  a{text-decoration:none}
+}
+
+/* printing: nothing should be cut in half */
+@media print{
+  body{background:#fff}
+  .card, .fig, .quote, .credit-in, .sources{
+    page-break-inside:avoid; break-inside:avoid;
+  }
+  .figures{page-break-inside:avoid; break-inside:avoid}
+  section{page-break-inside:auto}
+  .eyebrow, h2, .when{page-break-after:avoid; break-after:avoid}
+  h2{page-break-before:auto}
+  .hero{page-break-after:avoid}
+  footer{page-break-before:avoid}
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-in">
+    <a class="back" href="index.html">← back to Clover</a>
+    <h1>89 Cents</h1>
+    <p class="sub" style="color:#ffb37a;font-weight:700;margin-bottom:8px">The creator earned eighty nine cents. Honey took thirty five dollars.</p>
+    <p class="sub">A plain record of what was found out about Honey, kept here so it stays in one place and stays readable.</p>
+  </div>
+</div>
+
+<div class="credit">
+  <div class="credit-in">
+    <p><b>None of this investigation is ours.</b> It was done by MegaLag, a New Zealand investigative journalist, over several years, and verified in part by Ben Edelman, a researcher who has spent two decades documenting affiliate fraud. His third video is called The Honey Files. This page is only a record of what he and Edelman found, written in one place so it stays readable.</p>
+    <p class="note">Clover exists because of this story. Everything below is why.</p>
+  </div>
+</div>
+
+<main>
+
+  <section>
+    <p class="eyebrow">Part one</p>
+    <h2>Exposing the Honey Influencer Scam</h2>
+    <p class="when">21 December 2024 · 23 minutes · past 9 million views in days</p>
+
+    <div class="card">
+      <h3><span class="num">1</span>The hidden tab</h3>
+      <p>At checkout, Honey opened a discrete tab in the corner of the browser and injected a simulated referral click, so the sale was credited to Honey. This is called cookie stuffing. It replaced the affiliate cookie of whoever had actually sent you to the shop.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="num">2</span>It did this even with no coupon</h3>
+      <p>The link was overwritten whether or not Honey found a working code. So a tool that failed to save you anything still took the commission from the person whose recommendation sent you there.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="num">3</span>Thirty five dollars against eighty nine cents</h3>
+      <p>On one purchase, going through the creator's own affiliate link earned about thirty five dollars. The same purchase made with Honey's rewards active earned eighty nine cents in cashback. The rest went to PayPal.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="num">4</span>Better codes were hidden</h3>
+      <p>Partner shops could tell Honey which codes to display. If a thirty percent code and a five percent code both existed, the five percent one is what you saw. The pitch was always the best coupon. Codes were also found on other coupon sites at times when Honey reported none existed.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="num">5</span>It hit the people advertising it</h3>
+      <p>Linus Tech Tips had promoted Honey across more than a hundred and sixty videos totalling close to two hundred million views. MrBeast and MKBHD had promoted it too. Their own audiences, buying through their own links, were losing them commission. Markiplier had turned down a Honey sponsorship back in 2020, saying only that he did not trust them.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Part two</p>
+    <h2>Exposing Honey's Evil Business Model</h2>
+    <p class="when">22 December 2025</p>
+
+    <div class="figures">
+      <div class="fig"><b>181,000</b><span>shops in Honey's database</span></div>
+      <div class="fig"><b>35,000</b><span>that had actually agreed</span></div>
+      <div class="fig"><b>146,000</b><span>listed without consent</span></div>
+    </div>
+
+    <div class="card">
+      <h3><span class="num">6</span>Shops that never agreed</h3>
+      <p>The extension described shops as participating. Most of them had no agreement with Honey at all and had never been asked.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="num">7</span>Codes taken from users</h3>
+      <p>When you typed a code Honey did not recognise, it asked permission to share it with everyone else. The allegation is that it took them regardless. Around sixty two percent of the coupon library came from users and manual entry, not from the clever scanning the advertising described.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="num">8</span>Codes that were never meant to be public</h3>
+      <p>Staff discounts, refund codes, one-off promotions, and in some cases codes giving a hundred percent off. One business said it cost them thousands before they noticed. Shops that asked to be removed say they were told the codes would come out if they became paying affiliates.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="num">9</span>The six minute window</h3>
+      <p>Affiliate rules require tools like Honey to stand down for a period after someone else's referral. Archived copies of Honey's own code show that window was originally set to six minutes. After the first video went viral it was quietly raised to an hour. Six minutes means that if you clicked a creator's link, browsed for seven minutes and then bought, the credit was taken.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="num">10</span>Advertising aimed at children</h3>
+      <p>The video documented Honey marketing placed in front of minors.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Part three</p>
+    <h2>The Honey Files Expose Major Fraud</h2>
+    <p class="when">30 December 2025 · with Ben Edelman</p>
+
+    <p>This is the part that changes the story from a company being greedy to a company knowing exactly what it was doing.</p>
+
+    <div class="card">
+      <h3><span class="num">11</span>Selective stand-down</h3>
+      <p>Honey followed the stand-down rules properly when it believed it was being watched, and ignored them when it believed it was not. Edelman extracted the source code, captured the configuration files with a packet sniffer, and cross-checked both against how the extension actually behaved and against archived versions going back to 2017.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="num">12</span>How it decided you were a tester</h3>
+      <p>Four things were checked. How old your account was. How many cashback points you had. A list held on Honey's servers. And whether your browser held cookies from affiliate networks such as CJ or Awin, which is to say whether you had ever logged into an affiliate dashboard. If you looked like an insider, Honey behaved perfectly.</p>
+    </div>
+
+    <div class="quote">
+      <p>Edelman's conclusion: it is inconceivable why a shopping plugin should care whether a user had previously logged into an affiliate dashboard. There is only one reason to check, and that is to hide from testers. Which means the company knew the behaviour was not allowed.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="num">13</span>The thresholds moved after the first video</h3>
+      <p>The points threshold was raised to sixty five thousand, putting it out of reach of most testers. But a separate rule for Rakuten requiring only five thousand points was left behind, and that oversight let researchers demonstrate the whole system still working.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="num">14</span>A switch on their end</h3>
+      <p>The system could be turned off globally from Honey's servers at any moment, without users or affiliate networks seeing anything change. A week after Edelman published, the selective stand-down quietly disappeared from the configuration files. He called that a kind of admission.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Separately</p>
+    <h2>What it was collecting</h2>
+
+    <div class="card">
+      <h3><span class="num">15</span>The GDPR test</h3>
+      <p>Honey's policy said it only collected data on shopping sites it supported, that nothing identified you personally, and that nothing was ever sold. In 2020 a German privacy group had two members exercise their right to request their own data. What came back did not match the policy: browsing history at scale, with timestamps, location and page addresses, tied to a user id, including for someone who had never created an account. They filed complaints with the data protection authorities.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="num">16</span>Amazon's warning</h3>
+      <p>Amazon put a notice on its own site telling shoppers the extension tracked their private shopping behaviour and could read or change data on any website they visited, and advising them to uninstall it immediately. Worth knowing that PayPal had just bought Honey for four billion dollars and Amazon is a competitor, so the timing suited them. The wording was still specific rather than vague.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">2026</p>
+    <h2>Thrown out, then let back in</h2>
+
+    <p>The networks that Honey had been taking commissions through finally acted, and then the story turned in a way nobody expected.</p>
+
+    <div class="card">
+      <h3><span class="num">17</span>The evidence in the court filing</h3>
+      <p>A second complaint was filed on 5 January 2026, a hundred and one pages with actual merchant contracts attached. Paragraph 253 says internal emails between Rakuten and PayPal show Honey repeatedly violated Rakuten's stand down policies from as early as July 2020, and kept doing it after the lawsuits were filed, through at least May 2025. Two months earlier a judge had refused PayPal's attempt to move the case out of open court into private arbitration.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="num">18</span>Three networks cut them off</h3>
+      <p>Rakuten Advertising terminated Honey on 12 January 2026, which cut it off from around two thousand shops including Walmart, Sephora, Lego, Dyson and Uniqlo. Impact.com suspended them four days later, citing stand down violations and hiding from testers. Awin ran its own investigation and confirmed the breaches on 21 January, froze payments, and blocked access to new advertisers.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="num">19</span>The defeat device vanished the same day</h3>
+      <p>According to MegaLag, the configuration file holding the selective stand down logic was switched off at almost exactly the moment Rakuten's ban landed. His comment was that the timing would not look good in court.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="num">20</span>And then they were allowed back</h3>
+      <p>On 6 May 2026 Rakuten published an open source tool that lets any extension check whether somebody else already earned the credit for a visit, and stand down properly. Honey installed it and was reinstated to the network the same day. No fine, no penalty, back to normal.</p>
+      <p>Ben Edelman, whose research proved the hiding in the first place, said publicly that he would have expected Honey to pay a substantial penalty for the trouble caused, the cost of the investigations, and the loss of confidence in the whole industry. He asked whether a company should simply get to install the fix and carry on as if nothing had happened.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="num">21</span>Why people inside the industry said it was fine</h3>
+      <p>The tester detection had a side effect worth sitting with. Edelman put it plainly: when Honey suspected a user might be a tester, a network quality employee, a merchant's affiliate manager, an affiliate or just an enthusiast, the software honoured the stand down rules in full.</p>
+      <p>So anyone in a position to check was shown the version that behaved. Affiliate managers who tested it saw a well behaved extension. People who worked in the industry, and reportedly people who worked at Honey, could install it, watch it at a checkout, and honestly conclude that MegaLag had got it wrong. They were not lying. They were looking at different software.</p>
+      <p>That is the part that makes this different from ordinary corner cutting. A company can break a rule by accident. Building a system that shows the compliant version specifically to the people who might notice is not an accident, and Edelman's argument is that it proves Honey knew the behaviour was against the rules. You do not hide something you think is allowed.</p>
+    </div>
+
+    <div class="quote">
+      <p>The new rules are worth reading, because they describe Clover by accident. All stand down logic has to run inside the extension, not on a server, so it cannot be changed invisibly. And software must not take any action designed to hide its behaviour from testers.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="eyebrow">Since then</p>
+    <h2>What it cost</h2>
+
+    <div class="figures">
+      <div class="fig"><b>20m → 14m</b><span>Chrome users by July 2025</span></div>
+      <div class="fig"><b>~2,000</b><span>shops lost in the Rakuten ban</span></div>
+      <div class="fig"><b>20+</b><span>class actions against PayPal</span></div>
+    </div>
+
+    <p>The lawsuits allege wiretapping, computer hacking, unfair competition, consumer fraud, tortious interference and unjust enrichment. Google rewrote its rules for Chrome extensions specifically to block what Honey had been doing. Edelman has since proposed new affiliate industry rules designed to make testing easier, and found the same stand-down violations in Microsoft's own Edge shopping tool, so this was never only one company.</p>
+
+    <p>Honey's co-founder Ryan Hudson left PayPal in 2022 and started Pie, an ad blocker that pays you for ads you choose to see. Pie also ships a shopping extension that applies coupons and runs cashback. During setup, Pie offers to switch off your other ad blockers, and clicking that button removes uBlock Origin, AdGuard and Adblock Plus.</p>
+  </section>
+
+  <section>
+    <p class="eyebrow">Why this page exists</p>
+    <h2>The point of keeping the record</h2>
+    <p>None of this needed a coupon tool to be bad at coupons. Honey found real codes and applied them and people did save money. Everything above happened somewhere the user could not see, to someone who was not them.</p>
+    <p>That is the whole reason Clover shows every code in the open, counts who a code actually worked for instead of wearing a badge, and never touches a link somebody else earned. If a tool ever needs you not to look at it closely, that is the tool worth looking at closely.</p>
+  </section>
+
+  <section>
+    <p class="eyebrow">Where this came from</p>
+    <h2>Sources</h2>
+    <div class="sources">
+      <ul>
+        <li>MegaLag, <i>Exposing the Honey Influencer Scam</i>, December 2024</li>
+        <li>MegaLag, <i>Exposing Honey's Evil Business Model</i>, December 2025</li>
+        <li>MegaLag, <i>The Honey Files Expose Major Fraud</i>, December 2025</li>
+        <li>Ben Edelman, <i>Honey's Dieselgate: Detecting and Tricking Testers</i>, benedelman.org</li>
+        <li>datarequests.org, GDPR analysis of Honey's data collection, 2020</li>
+        <li>Reporting by Fortune, 9to5Google, Notebookcheck, Affiverse and others</li>
+      </ul>
+      <p class="note">One thing on this page is not fully checked. Reports that people working at Honey publicly said MegaLag was wrong are described here as reported rather than confirmed, because the mechanism is documented and the individual posts are not. The mechanism itself, that insiders were shown the compliant version, comes straight from Edelman's own write up.</p>
+      <p class="note">Corrected on 9 August 2026. An earlier version of this page said Honey fell from twenty million users to twelve million. The figure that holds up is a fall to about fourteen million by July 2025, and the count has moved around since in ways nobody has explained well. The original number was too confident and has been changed.</p>
+      <p class="note">Written from public reporting and published research. Where something is an allegation rather than a proven fact, it is written as one. Anything that could not be checked was left out, including a figure about the size of Honey's code database that appears in the videos but that could not be confirmed from public sources.</p>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p>Kept by <a href="index.html">Clover</a>. The investigation belongs to MegaLag and Ben Edelman.</p>
+</footer>
+
+</body>
+</html>
