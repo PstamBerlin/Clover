@@ -150,8 +150,12 @@ body.dark #themetoggle .moon{display:block}
   border:1px solid rgba(26,46,18,.12);background:var(--butter);color:var(--butter-ink);
   transition:filter var(--speed),transform var(--speed),background var(--speed);
 }
-.btn:hover{filter:brightness(.97)}
-.btn:active{transform:scale(.99)}
+.btn{transform:translate(var(--mx,0px),var(--my,0px))}
+.btn{transition:filter var(--speed),background var(--speed),transform var(--t-bounce) var(--bounce)}
+.btn.pulling{transition:filter var(--speed),background var(--speed),transform 90ms var(--ease-out)}
+.btn:hover{filter:brightness(.97);transform:translate(var(--mx,0px),calc(var(--my,0px) - 2px))}
+/* pressed, a button gets a little wider and flatter, and springs back */
+.btn:active{transform:translate(var(--mx,0px),var(--my,0px)) scale(1.03,.94);transition-duration:70ms}
 .btn.glass{background:rgba(255,255,255,.1);color:#ECF7EE;border-color:rgba(255,255,255,.3)}
 .btn.glass:hover{background:rgba(255,255,255,.16);filter:none}
 .btn.quiet{background:var(--frost);color:var(--ink);border-color:var(--line)}
@@ -183,8 +187,11 @@ main{position:relative;z-index:1;max-width:980px;margin:0 auto;padding:44px 20px
 .panel p{margin:0 0 12px}
 .panel p:last-child{margin-bottom:0}
 .lead{font-size:1.12rem;font-weight:700;line-height:1.4;margin:0 0 10px}
-.more{display:none}
-.more.open{display:block}
+/* the rest of the introduction opens like a drawer: the row grows from nothing to its own height */
+.more{display:grid;grid-template-rows:0fr;opacity:0;visibility:hidden;
+  transition:grid-template-rows .5s var(--ease-out),opacity .35s var(--ease),visibility 0s .5s}
+.more > .morein{min-height:0;overflow:hidden}
+.more.open{grid-template-rows:1fr;opacity:1;visibility:visible;transition:grid-template-rows .5s var(--ease-out),opacity .35s var(--ease) .1s,visibility 0s}
 .readmore{border:0;background:none;padding:0;color:var(--spring-deep);font-weight:800;cursor:pointer;font-size:.86rem}
 
 /* a small piece of the mesh: the extension card and the dark boxes */
@@ -264,10 +271,11 @@ body.dark .chip.on,body.dark .chip.on:hover{
   display:flex;align-items:center;gap:14px;padding:14px 16px;margin-bottom:10px;
   background:var(--card);border:1px solid var(--line);border-radius:14px;
   box-shadow:inset 0 1px 0 var(--glass-line);
-  animation:rise .38s backwards cubic-bezier(.2,.9,.3,1.1);
-  transition:border-color var(--speed),box-shadow var(--speed);
+  animation:card-in var(--t-bounce) var(--bounce-soft) backwards;
+  transition:border-color var(--speed),box-shadow var(--speed),transform var(--t-bounce) var(--bounce);
 }
-.code:hover{border-color:var(--edge-a);box-shadow:inset 0 1px 0 var(--glass-line),0 0 0 3px rgba(74,222,128,.16)}
+.code.still{animation:none}
+.code:hover{border-color:var(--edge-a);box-shadow:inset 0 1px 0 var(--glass-line),0 0 0 3px rgba(74,222,128,.16);transform:translateY(-2px)}
 .code.dead,.code.expired{opacity:.62}
 .code.dead .code-store::after{content:" retired";font-size:.7rem;font-weight:800;color:var(--coral);text-transform:uppercase;letter-spacing:.06em;margin-left:6px}
 @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
@@ -290,7 +298,8 @@ body.dark .chip.on,body.dark .chip.on:hover{
 }
 body.dark .code-pill{background:#07160F;border-color:var(--line)}
 .code-pill:hover{transform:scale(1.04)}
-.code-pill.copied{background:var(--butter);color:var(--butter-ink)}
+.code-pill:active{transform:scale(1.06,.92)}
+.code-pill.copied{background:var(--butter);color:var(--butter-ink);animation:blob-in var(--t-bounce) var(--bounce)}
 .code-note{margin-top:3px;font-size:.92rem}
 .limits{display:inline-block;margin-top:4px;font-size:.72rem;padding:2px 8px;border-radius:6px;color:var(--amber-ink);background:var(--amber-soft);border:1px solid var(--amber-line)}
 .code-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin-top:7px;font-size:.7rem;color:var(--ink-faint)}
@@ -471,6 +480,92 @@ footer b{color:#fff;font-family:var(--display)}
   .block{margin-bottom:48px}
   .chip{min-height:38px}
 }
+/* ================= motion =================
+   One set of timings (--bounce and --bounce-soft: Clover's green is already
+   called --spring, so the easings are not). They are real spring curves where the browser
+   can draw them (linear()), a plain ease-out where it cannot. Everything
+   moves with transform and opacity only, so a phone has no extra work.
+   People who ask their device for less motion get none of it: the rule at
+   the very end of this file switches every animation and transition off,
+   and site.js never hides anything for them. */
+:root{
+  --ease:cubic-bezier(.22,.61,.36,1); --ease-out:cubic-bezier(.22,1,.36,1);
+  --bounce:cubic-bezier(.34,1.4,.64,1); --bounce-soft:cubic-bezier(.22,1,.36,1); --t-bounce:420ms;
+}
+@supports (transition-timing-function: linear(0, 1)){
+  :root{
+    --bounce:linear(0,0.094,0.302,0.539,0.752,0.914,1.02,1.076,1.094,1.089,1.07,1.048,1.027,1.011,1,0.993,0.991,0.991,0.993,0.995,0.997,0.999,1,1.001,1);
+    --bounce-soft:linear(0,0.053,0.176,0.324,0.474,0.609,0.723,0.815,0.884,0.934,0.969,0.991,1.005,1.012,1.015,1.015,1.014,1.012,1.009,1.007,1.005,1.004,1.002,1.001,1);
+    --t-bounce:560ms;
+  }
+}
+@keyframes drop-in{from{opacity:0;transform:translateY(-14px)}}
+@keyframes rise-in{from{opacity:0;transform:translateY(16px)}}
+@keyframes fade-in{from{opacity:0}}
+@keyframes blob-in{from{opacity:0;transform:scale(.72,.56)}}
+@keyframes card-in{from{opacity:0;transform:translateY(14px) scale(.985)}}
+@keyframes leaf-in{from{opacity:0;transform:scale(0) rotate(-50deg)}}
+@keyframes stem-in{from{stroke-dashoffset:40}}
+@keyframes letter-in{from{opacity:0;transform:translateY(.55em) rotate(8deg)}}
+
+/* ---- the page assembles itself: bar, the clover grows leaf by leaf, the word, the line, the buttons, the numbers ---- */
+#bar{animation:drop-in .5s var(--ease-out) backwards}
+.field{animation:fade-in 1.6s var(--ease) .2s backwards}
+.hero-mark .spin > g > path{transform-origin:50px 50px;animation:leaf-in var(--t-bounce) var(--bounce) backwards}
+.hero-mark .spin > g > path:nth-child(1){animation-delay:.12s}
+.hero-mark .spin > g > path:nth-child(2){animation-delay:.2s}
+.hero-mark .spin > g > path:nth-child(3){animation-delay:.28s}
+.hero-mark .spin > g > path:nth-child(4){animation-delay:.36s}
+.hero-mark .spin > path{stroke-dasharray:40;animation:stem-in .5s var(--ease-out) .48s backwards}
+.hero-mark .spin > circle{transform-origin:50px 50px;animation:blob-in var(--t-bounce) var(--bounce) .5s backwards}
+.hero h1 .ch{display:inline-block;animation:letter-in var(--t-bounce) var(--bounce) backwards;animation-delay:calc(.4s + var(--i,0) * 55ms)}
+.hero .tag{animation:rise-in .6s var(--ease-out) .82s backwards}
+.hero .swear{animation:blob-in var(--t-bounce) var(--bounce) .96s backwards}
+.hero-ctas .btn{animation:blob-in var(--t-bounce) var(--bounce) 1.08s backwards}
+.hero-ctas .btn + .btn{animation-delay:1.16s}
+.stats{animation:rise-in .7s var(--ease-out) 1.05s backwards}
+.stat b.tick{animation:blob-in var(--t-bounce) var(--bounce)}
+
+/* ---- sections show up as you reach them: their pieces rise in one after the other ----
+   (only with html.motion, which site.js sets when it can also bring them back in) */
+html.motion .rv{opacity:0;transform:translateY(22px)}
+html.motion .rv.in{opacity:1;transform:none;
+  transition:opacity .55s var(--ease),transform var(--t-bounce) var(--bounce-soft);transition-delay:calc(var(--i,0) * 70ms)}
+
+/* ---- the bar: one pill that glides to the section you are in, stretching on the way ---- */
+#bar nav{position:relative}
+.navpill{position:absolute;left:0;top:50%;height:32px;width:0;margin-top:-16px;border-radius:999px;pointer-events:none;opacity:0;
+  background:rgba(134,239,172,.14)}
+body:not(.dark) #bar.light .navpill{background:rgba(21,128,61,.1)}
+.navpill.show{opacity:1}
+.navpill.stretch{transition:left .17s var(--ease-out),width .17s var(--ease-out),opacity .2s}
+.navpill.settle{transition:left var(--t-bounce) var(--bounce),width var(--t-bounce) var(--bounce),opacity .2s}
+#bar nav.glide a.on,body:not(.dark) #bar.light nav.glide a.on{background:transparent}
+#bar nav a{position:relative;z-index:1}
+
+/* ---- small answers to what you do ---- */
+.chip{transition:border-color var(--speed),color var(--speed),background var(--speed),transform var(--t-bounce) var(--bounce)}
+.chip:active{transform:scale(1.05,.9);transition-duration:70ms}
+.chips-fresh .chip.on{animation:blob-in var(--t-bounce) var(--bounce)}
+.vote{position:relative;transition:border-color var(--speed),color var(--speed),background var(--speed),transform var(--t-bounce) var(--bounce)}
+.vote:active{transform:scale(1.06,.9);transition-duration:70ms}
+@keyframes vote-pop{from{transform:scale(1.22,.8)}}
+.vote.pop{animation:vote-pop var(--t-bounce) var(--bounce)}
+.score.pop{animation:blob-in var(--t-bounce) var(--bounce)}
+/* the little "+1" that floats off a vote */
+.floaty{position:absolute;left:50%;top:-4px;font-size:.72rem;font-weight:800;color:var(--spring-deep);pointer-events:none;white-space:nowrap;
+  animation:float-up .9s var(--ease-out) forwards}
+.floaty.down{color:var(--coral)}
+@keyframes float-up{from{opacity:0;transform:translate(-50%,6px) scale(.7)}25%{opacity:1}to{opacity:0;transform:translate(-50%,-26px) scale(1)}}
+#themetoggle.pop svg{animation:turn-in var(--t-bounce) var(--bounce)}
+@keyframes turn-in{from{transform:rotate(-90deg) scale(.5)}}
+.dircard{transition:border-color var(--speed),box-shadow var(--speed),transform var(--t-bounce) var(--bounce)}
+.dircard:hover{transform:translateY(-2px)}
+.dircard.still,.storecard.still{animation:none}
+.fold[open] .foldbody{animation:rise-in .45s var(--ease-out)}
+.status:not(:empty){animation:rise-in .35s var(--ease-out)}
+.nudge{animation:blob-in var(--t-bounce) var(--bounce)}
+
 @media (prefers-reduced-motion:reduce){
   *{animation:none!important;transition:none!important}
   html{scroll-behavior:auto}
@@ -538,11 +633,11 @@ footer b{color:#fff;font-family:var(--display)}
   <section class="block two" id="about">
     <div class="panel">
       <p class="lead">Clover finds coupon codes and tries them for you at checkout.</p>
-      <div class="more" id="introrest">
+      <div class="more" id="introrest"><div class="morein">
         <p>Most coupon sites hide their codes behind a Get Code button and fill the list with whatever they scraped, so you burn ten minutes on codes that died months ago. Clover does it the other way round. Every code is in plain sight, tagged with what it takes off, what it restricts, and which region it works in.</p>
         <p>The part that matters is the tally. When a code works for someone they tap Worked, and when it fails they tap Nope. That rate sits on the card. Anything that drops under 40% takes itself off the list, so nothing sticks around pretending to be alive.</p>
         <p>The browser extension does the boring bit. On a checkout page a small clover appears, and if you tap it, it types each code into the promo box and keeps whichever ones saved the most.</p>
-      </div>
+      </div></div>
       <button class="readmore" id="readmore">Read more</button>
     </div>
     <div class="mesh">
@@ -1480,6 +1575,55 @@ function copyText(t){ try{ navigator.clipboard && navigator.clipboard.writeText(
 let fStore = "all", fCountry = "all", fCat = "all", query = "", showDead = false;
 let openStore = null, listOpen = false, chipsOpen = false, dirOpen = false, dirCat = "all";
 
+/* ---------- motion ----------
+   calm: the device asks for less motion, so nothing here animates or hides
+   anything (site.css switches the CSS animations off for it as well).
+   The "last" values remember what was drawn, so a list only plays its
+   entrance when its contents really changed: a vote redraws everything and
+   used to make every card jump in again. */
+const calm = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+const pageT0 = performance.now();
+let lastListSig = null, lastDirSig = null, lastStorePage = null, lastFilterKey = null;
+// A number counts up to its value: from zero the first time (once the stat
+// strip has arrived), from where it stands after that.
+function countTo(el, n, suffix){
+  suffix = suffix || "";
+  if(calm){ el.textContent = n+suffix; return; }
+  if(el.__to === n && el.__suffix === suffix) return;
+  el.__to = n; el.__suffix = suffix;
+  const first = el.__cur == null, from = first ? 0 : el.__cur;
+  cancelAnimationFrame(el.__raf);
+  // Never before the stat strip has arrived (it comes in about a second after the page opens).
+  // The shared list lands a moment after the built-in one and changes the numbers: that second
+  // value simply becomes where the first count is heading, it does not start an early one.
+  const now = performance.now(), arrives = pageT0 + 1250, intro = first || now < arrives;
+  const start = Math.max(now, arrives), dur = intro ? 1000 : 420;
+  if(first){ el.__cur = 0; el.textContent = "0"+suffix; }
+  const step = t=>{
+    const k = Math.min(1, Math.max(0, (t - start)/dur)), e = 1 - Math.pow(1 - k, 3);
+    el.__cur = Math.round(from + (n - from)*e); el.textContent = el.__cur+suffix;
+    if(k < 1) el.__raf = requestAnimationFrame(step);
+    else if(!intro && from !== n){ el.classList.remove("tick"); void el.offsetWidth; el.classList.add("tick"); }
+  };
+  el.__raf = requestAnimationFrame(step);
+}
+function plainStat(el, text){ cancelAnimationFrame(el.__raf); el.__to = null; el.__cur = null; el.textContent = text; }
+// What a vote feels like: the button pops, the score pops, and a small "+1" floats off it.
+function popVote(id, dir, added){
+  if(calm) return;
+  const card = [...document.querySelectorAll("#list .code")].find(e=>e.dataset.id === id);
+  if(!card) return;
+  const b = card.querySelector(".vote."+dir), sc = card.querySelector(".score");
+  if(sc) sc.classList.add("pop");
+  if(!b) return;
+  b.classList.add("pop");
+  if(added){
+    const f = document.createElement("i");
+    f.className = "floaty"+(dir === "down" ? " down" : ""); f.textContent = dir === "up" ? "+1" : "noted"; f.setAttribute("aria-hidden", "true");
+    b.appendChild(f); setTimeout(()=>f.remove(), 950);
+  }
+}
+
 /* ---------- filters ---------- */
 function countWith(codes, over){
   const f = Object.assign({ store:fStore, country:fCountry, cat:fCat }, over);
@@ -1551,7 +1695,8 @@ function renderStorePage(codes){
   const avg = reported.length ? Math.round(reported.map(rate).reduce((a,b)=>a+b,0)/reported.length) : null;
   const confident = reported.filter(c=>((c.up||0)+(c.down||0)) >= CONFIDENT).length;
   const rateTxt = avg === null ? "—" : confident ? avg+"%" : rateWord(avg);
-  box.innerHTML = `<div class="panel storecard">
+  const sameStore = lastStorePage === openStore; lastStorePage = openStore;
+  box.innerHTML = `<div class="panel storecard${sameStore ? " still" : ""}">
     <img class="favicon big" src="${favicon(openStore)}" alt="">
     <div class="storename"><b>${esc(openStore)}</b><span>${live.length} working now, ${all.length} tracked in total</span></div>
     <div class="storestats">
@@ -1644,11 +1789,14 @@ function renderList(codes){
   }
   const PAGE = 8;
   const visible = listOpen ? shown : shown.slice(0, PAGE);
+  // the cards come in one after the other only when the list is a different one (not when a vote redraws it)
+  const sig = visible.map(c=>c.id).join("\n"), still = sig === lastListSig; lastListSig = sig;
   visible.forEach((c,i)=>{
     const pct = rate(c), retired = isRetired(c), expired = isExpired(c), dl = daysLeft(c);
     const el = document.createElement("div");
-    el.className = "code"+(retired ? " dead" : "")+(expired ? " expired" : "");
-    el.style.animationDelay = Math.min(i*0.035,.4)+"s";
+    el.className = "code"+(retired ? " dead" : "")+(expired ? " expired" : "")+(still ? " still" : "");
+    el.dataset.id = c.id;
+    el.style.animationDelay = Math.min(i*0.045,.45)+"s";
     let expText = "";
     if(expired) expText = `<span class="expiry gone">expired</span>`;
     else if(dl !== null && dl <= 7) expText = `<span class="expiry soon">${dl === 0 ? "ends today" : dl+"d left"}</span>`;
@@ -1725,6 +1873,7 @@ function vote(id, dir){
   const c = codes.find(x=>x.id === id);
   if(!c) return;
   const had = voted[id];
+  const added = !(had && had.dir === dir);   // false: the same button again takes the vote back
   if(had && had.dir === dir){
     // the same button again takes the vote back, here; the shared database
     // is append-only, so what was already sent stays sent
@@ -1745,29 +1894,30 @@ function vote(id, dir){
   }
   saveVoted();
   draw();
+  popVote(id, dir, added);
 }
 
 /* ---------- stats ---------- */
 function renderStats(codes){
   const live = codes.filter(isLive);
-  document.getElementById("s-codes").textContent = live.length;
-  document.getElementById("s-stores").textContent = new Set(live.map(c=>c.store)).size;
+  countTo(document.getElementById("s-codes"), live.length);
+  countTo(document.getElementById("s-stores"), new Set(live.map(c=>c.store)).size);
   const reported = live.filter(c=>((c.up||0)+(c.down||0)) > 0 && !isSingleUse(c));
   const confident = reported.filter(c=>((c.up||0)+(c.down||0)) >= CONFIDENT);
   const el = document.getElementById("s-rate"), lab = el.nextElementSibling;
-  if(reported.length === 0){ el.textContent = "—"; lab.textContent = "Working"; lab.title = "No reports yet"; }
+  if(reported.length === 0){ plainStat(el, "—"); lab.textContent = "Working"; lab.title = "No reports yet"; }
   else if(confident.length < CONFIDENT_CODES){
     // A headline percentage needs real evidence: without it a single vote
     // per code would read as "100% working", which nobody has shown.
     const avg = Math.round(reported.map(rate).reduce((a,b)=>a+b,0)/reported.length);
-    el.textContent = rateWord(avg); lab.textContent = "Working, early";
+    plainStat(el, rateWord(avg)); lab.textContent = "Working, early";
     lab.title = reported.length+" code"+(reported.length === 1 ? "" : "s")+" reported on, "+confident.length+" with "+CONFIDENT+" or more reports. A percentage shows once "+CONFIDENT_CODES+" codes have that many.";
   }else{
     const avg = Math.round(confident.map(rate).reduce((a,b)=>a+b,0)/confident.length);
-    el.textContent = avg+"%"; lab.textContent = "Working";
+    countTo(el, avg, "%"); lab.textContent = "Working";
     lab.title = "Across "+confident.length+" codes with "+CONFIDENT+" or more reports each";
   }
-  document.getElementById("s-people").textContent = new Set(codes.map(c=>c.by).filter(Boolean)).size;
+  countTo(document.getElementById("s-people"), new Set(codes.map(c=>c.by).filter(Boolean)).size);
   const sc = document.getElementById("story-count"), ss = document.getElementById("story-stores");
   if(sc) sc.textContent = live.length;
   if(ss) ss.textContent = new Set(live.map(c=>c.store)).size;
@@ -1795,9 +1945,11 @@ function renderDirectory(codes){
   grid.innerHTML = "";
   if(shown.length === 0){ grid.innerHTML = `<div class="empty" style="grid-column:1/-1">Nothing in this category yet.</div>`; return; }
   const DPAGE = 12;
-  (dirOpen ? shown : shown.slice(0, DPAGE)).forEach((s,i)=>{
+  const dvis = dirOpen ? shown : shown.slice(0, DPAGE);
+  const dsig = dvis.map(x=>x.name).join("\n"), dstill = dsig === lastDirSig; lastDirSig = dsig;
+  dvis.forEach((s,i)=>{
     const el = document.createElement("button");
-    el.type = "button"; el.className = "dircard";
+    el.type = "button"; el.className = "dircard"+(dstill ? " still" : "");
     el.style.animationDelay = Math.min(i*0.03,.4)+"s";
     el.innerHTML = `<img src="${favicon(s.name)}" alt=""><span class="dirname">${esc(s.name)}</span><span class="dircat">${esc(CATS[s.cat]||s.cat)}</span>
       <span class="dirstats"><b>${s.live}</b> live ${s.best ? `<span class="dirbest">up to ${s.best}%</span>` : ""}</span>`;
@@ -2050,11 +2202,18 @@ function loadTheme(){
 document.getElementById("themetoggle").addEventListener("click", ()=>{
   const dark = document.body.classList.toggle("dark");
   store.set(THEME_KEY, dark ? "dark" : "light");
+  const tb = document.getElementById("themetoggle"); tb.classList.remove("pop"); void tb.offsetWidth; tb.classList.add("pop");
 });
 
 /* the top bar goes light once the hero has scrolled past, in light mode */
 const bar = document.getElementById("bar");
-function barLook(){ bar.classList.toggle("light", window.scrollY > 300); }
+function barLook(){
+  bar.classList.toggle("light", window.scrollY > 300);
+  // back at the top, in the hero, no section is the current one
+  if(window.scrollY < 220 && typeof navLinks !== "undefined" && navLinks.some(a=>a.classList.contains("on"))){
+    navLinks.forEach(a=>a.classList.remove("on")); movePill();
+  }
+}
 window.addEventListener("scroll", barLook, { passive:true });
 
 /* which section is on screen, for the bar */
@@ -2063,11 +2222,85 @@ if("IntersectionObserver" in window){
   const io = new IntersectionObserver(entries=>{
     entries.forEach(en=>{
       if(!en.isIntersecting) return;
+      if(window.scrollY < 220) return;
       navLinks.forEach(a=>a.classList.toggle("on", a.getAttribute("href") === "#"+en.target.id));
+      movePill();
     });
   }, { rootMargin:"-40% 0px -55% 0px" });
   ["codes","stores","why","always","get"].forEach(id=>{ const el = document.getElementById(id); if(el) io.observe(el); });
 }
+
+/* the bar's pill: one shape that glides to the section you are in. It first
+   stretches over the old link and the new one, then shrinks onto the new one. */
+const navEl = document.querySelector("#bar nav"), pill = document.createElement("span");
+pill.className = "navpill"; pill.setAttribute("aria-hidden", "true");
+navEl.prepend(pill); navEl.classList.add("glide");
+let pillT = 0;
+function movePill(){
+  const a = navEl.querySelector("a.on");
+  clearTimeout(pillT);
+  if(!a){ pill.className = "navpill"; return; }
+  const L = a.offsetLeft, W = a.offsetWidth, curL = parseFloat(pill.style.left) || 0, curW = parseFloat(pill.style.width) || 0;
+  const place = ()=>{ pill.style.left = L+"px"; pill.style.width = W+"px"; };
+  if(calm || !pill.classList.contains("show") || !curW){ pill.className = "navpill show"; place(); }
+  else{
+    const uL = Math.min(curL, L), uR = Math.max(curL + curW, L + W);
+    pill.className = "navpill show stretch"; pill.style.left = uL+"px"; pill.style.width = (uR - uL)+"px";
+    pillT = setTimeout(()=>{ pill.className = "navpill show settle"; place(); }, 130);
+  }
+  if(a.scrollIntoView && navEl.scrollWidth > navEl.clientWidth) a.scrollIntoView({ block:"nearest", inline:"nearest" });
+}
+window.addEventListener("resize", ()=>{ pill.classList.remove("stretch", "settle"); movePill(); });
+
+/* the word in the hero comes in letter by letter (the whole word stays what a screen reader says) */
+(function(){
+  const h = document.querySelector(".hero h1");
+  if(calm || !h) return;
+  const word = h.textContent;
+  h.setAttribute("aria-label", word);
+  h.innerHTML = [...word].map((ch,i)=>`<span class="ch" aria-hidden="true" style="--i:${i}">${ch === " " ? "&nbsp;" : esc(ch)}</span>`).join("");
+})();
+
+/* sections show up as you reach them: each piece of a section rises in, one
+   after the other. Nothing is hidden unless this script can also show it:
+   no IntersectionObserver, or less motion asked for, and the page is simply there. */
+(function(){
+  if(calm || !("IntersectionObserver" in window)) return;
+  const blocks = [...document.querySelectorAll("main .block")];
+  blocks.forEach(b=>[...b.children].forEach((ch,i)=>{ ch.classList.add("rv"); ch.style.setProperty("--i", Math.min(i, 5)); }));
+  document.documentElement.classList.add("motion");
+  const show = b=>{
+    const kids = [...b.children];
+    kids.forEach(ch=>ch.classList.add("in"));
+    // afterwards they are ordinary elements again (no delay left on their transitions)
+    setTimeout(()=>kids.forEach(ch=>{ ch.classList.remove("rv", "in"); ch.style.removeProperty("--i"); }), 1600);
+  };
+  let fired = false;
+  const io = new IntersectionObserver(entries=>entries.forEach(en=>{
+    fired = true;
+    if(!en.isIntersecting) return;
+    io.unobserve(en.target);
+    // what is on screen when the page opens waits for the hero to finish
+    const wait = Math.max(0, 1150 - (performance.now() - pageT0));
+    if(wait) setTimeout(()=>show(en.target), wait); else show(en.target);
+  }), { rootMargin:"0px 0px -8% 0px" });
+  blocks.forEach(b=>io.observe(b));
+  // a safety net: whatever happens, nothing stays hidden
+  window.addEventListener("load", ()=>setTimeout(()=>{ if(!fired) blocks.forEach(show); }, 4000));
+})();
+
+/* the two big buttons in the hero lean a little toward the pointer (mouse and trackpad only) */
+(function(){
+  if(calm || !(window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)").matches)) return;
+  document.querySelectorAll(".hero-ctas .btn").forEach(b=>{
+    b.addEventListener("pointermove", e=>{
+      const r = b.getBoundingClientRect(); b.classList.add("pulling");
+      b.style.setProperty("--mx", ((e.clientX - (r.left + r.width/2))*0.14).toFixed(1)+"px");
+      b.style.setProperty("--my", ((e.clientY - (r.top + r.height/2))*0.14).toFixed(1)+"px");
+    });
+    b.addEventListener("pointerleave", ()=>{ b.classList.remove("pulling"); b.style.setProperty("--mx", "0px"); b.style.setProperty("--my", "0px"); });
+  });
+})();
 
 /* falling clovers in the hero */
 (function(){
@@ -2083,6 +2316,9 @@ if("IntersectionObserver" in window){
 /* ---------- draw everything ---------- */
 function draw(){
   const codes = getCodes();
+  // the chip you just picked pops; a redraw for any other reason leaves the chips alone
+  const fkey = [fStore, fCat, fCountry].join("|");
+  document.body.classList.toggle("chips-fresh", lastFilterKey !== null && fkey !== lastFilterKey); lastFilterKey = fkey;
   const safe = (fn,arg)=>{ try{ fn(arg); }catch(e){ console.warn(fn.name, e); } };
   safe(renderStats, codes); safe(renderChips, codes); safe(renderCats, codes); safe(renderCountries, codes);
   safe(renderStorePage, codes); safe(renderList, codes); safe(renderDirectory, codes);

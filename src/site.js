@@ -254,6 +254,55 @@ function copyText(t){ try{ navigator.clipboard && navigator.clipboard.writeText(
 let fStore = "all", fCountry = "all", fCat = "all", query = "", showDead = false;
 let openStore = null, listOpen = false, chipsOpen = false, dirOpen = false, dirCat = "all";
 
+/* ---------- motion ----------
+   calm: the device asks for less motion, so nothing here animates or hides
+   anything (site.css switches the CSS animations off for it as well).
+   The "last" values remember what was drawn, so a list only plays its
+   entrance when its contents really changed: a vote redraws everything and
+   used to make every card jump in again. */
+const calm = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+const pageT0 = performance.now();
+let lastListSig = null, lastDirSig = null, lastStorePage = null, lastFilterKey = null;
+// A number counts up to its value: from zero the first time (once the stat
+// strip has arrived), from where it stands after that.
+function countTo(el, n, suffix){
+  suffix = suffix || "";
+  if(calm){ el.textContent = n+suffix; return; }
+  if(el.__to === n && el.__suffix === suffix) return;
+  el.__to = n; el.__suffix = suffix;
+  const first = el.__cur == null, from = first ? 0 : el.__cur;
+  cancelAnimationFrame(el.__raf);
+  // Never before the stat strip has arrived (it comes in about a second after the page opens).
+  // The shared list lands a moment after the built-in one and changes the numbers: that second
+  // value simply becomes where the first count is heading, it does not start an early one.
+  const now = performance.now(), arrives = pageT0 + 1250, intro = first || now < arrives;
+  const start = Math.max(now, arrives), dur = intro ? 1000 : 420;
+  if(first){ el.__cur = 0; el.textContent = "0"+suffix; }
+  const step = t=>{
+    const k = Math.min(1, Math.max(0, (t - start)/dur)), e = 1 - Math.pow(1 - k, 3);
+    el.__cur = Math.round(from + (n - from)*e); el.textContent = el.__cur+suffix;
+    if(k < 1) el.__raf = requestAnimationFrame(step);
+    else if(!intro && from !== n){ el.classList.remove("tick"); void el.offsetWidth; el.classList.add("tick"); }
+  };
+  el.__raf = requestAnimationFrame(step);
+}
+function plainStat(el, text){ cancelAnimationFrame(el.__raf); el.__to = null; el.__cur = null; el.textContent = text; }
+// What a vote feels like: the button pops, the score pops, and a small "+1" floats off it.
+function popVote(id, dir, added){
+  if(calm) return;
+  const card = [...document.querySelectorAll("#list .code")].find(e=>e.dataset.id === id);
+  if(!card) return;
+  const b = card.querySelector(".vote."+dir), sc = card.querySelector(".score");
+  if(sc) sc.classList.add("pop");
+  if(!b) return;
+  b.classList.add("pop");
+  if(added){
+    const f = document.createElement("i");
+    f.className = "floaty"+(dir === "down" ? " down" : ""); f.textContent = dir === "up" ? "+1" : "noted"; f.setAttribute("aria-hidden", "true");
+    b.appendChild(f); setTimeout(()=>f.remove(), 950);
+  }
+}
+
 /* ---------- filters ---------- */
 function countWith(codes, over){
   const f = Object.assign({ store:fStore, country:fCountry, cat:fCat }, over);
@@ -325,7 +374,8 @@ function renderStorePage(codes){
   const avg = reported.length ? Math.round(reported.map(rate).reduce((a,b)=>a+b,0)/reported.length) : null;
   const confident = reported.filter(c=>((c.up||0)+(c.down||0)) >= CONFIDENT).length;
   const rateTxt = avg === null ? "—" : confident ? avg+"%" : rateWord(avg);
-  box.innerHTML = `<div class="panel storecard">
+  const sameStore = lastStorePage === openStore; lastStorePage = openStore;
+  box.innerHTML = `<div class="panel storecard${sameStore ? " still" : ""}">
     <img class="favicon big" src="${favicon(openStore)}" alt="">
     <div class="storename"><b>${esc(openStore)}</b><span>${live.length} working now, ${all.length} tracked in total</span></div>
     <div class="storestats">
@@ -418,11 +468,14 @@ function renderList(codes){
   }
   const PAGE = 8;
   const visible = listOpen ? shown : shown.slice(0, PAGE);
+  // the cards come in one after the other only when the list is a different one (not when a vote redraws it)
+  const sig = visible.map(c=>c.id).join("\n"), still = sig === lastListSig; lastListSig = sig;
   visible.forEach((c,i)=>{
     const pct = rate(c), retired = isRetired(c), expired = isExpired(c), dl = daysLeft(c);
     const el = document.createElement("div");
-    el.className = "code"+(retired ? " dead" : "")+(expired ? " expired" : "");
-    el.style.animationDelay = Math.min(i*0.035,.4)+"s";
+    el.className = "code"+(retired ? " dead" : "")+(expired ? " expired" : "")+(still ? " still" : "");
+    el.dataset.id = c.id;
+    el.style.animationDelay = Math.min(i*0.045,.45)+"s";
     let expText = "";
     if(expired) expText = `<span class="expiry gone">expired</span>`;
     else if(dl !== null && dl <= 7) expText = `<span class="expiry soon">${dl === 0 ? "ends today" : dl+"d left"}</span>`;
@@ -499,6 +552,7 @@ function vote(id, dir){
   const c = codes.find(x=>x.id === id);
   if(!c) return;
   const had = voted[id];
+  const added = !(had && had.dir === dir);   // false: the same button again takes the vote back
   if(had && had.dir === dir){
     // the same button again takes the vote back, here; the shared database
     // is append-only, so what was already sent stays sent
@@ -519,29 +573,30 @@ function vote(id, dir){
   }
   saveVoted();
   draw();
+  popVote(id, dir, added);
 }
 
 /* ---------- stats ---------- */
 function renderStats(codes){
   const live = codes.filter(isLive);
-  document.getElementById("s-codes").textContent = live.length;
-  document.getElementById("s-stores").textContent = new Set(live.map(c=>c.store)).size;
+  countTo(document.getElementById("s-codes"), live.length);
+  countTo(document.getElementById("s-stores"), new Set(live.map(c=>c.store)).size);
   const reported = live.filter(c=>((c.up||0)+(c.down||0)) > 0 && !isSingleUse(c));
   const confident = reported.filter(c=>((c.up||0)+(c.down||0)) >= CONFIDENT);
   const el = document.getElementById("s-rate"), lab = el.nextElementSibling;
-  if(reported.length === 0){ el.textContent = "—"; lab.textContent = "Working"; lab.title = "No reports yet"; }
+  if(reported.length === 0){ plainStat(el, "—"); lab.textContent = "Working"; lab.title = "No reports yet"; }
   else if(confident.length < CONFIDENT_CODES){
     // A headline percentage needs real evidence: without it a single vote
     // per code would read as "100% working", which nobody has shown.
     const avg = Math.round(reported.map(rate).reduce((a,b)=>a+b,0)/reported.length);
-    el.textContent = rateWord(avg); lab.textContent = "Working, early";
+    plainStat(el, rateWord(avg)); lab.textContent = "Working, early";
     lab.title = reported.length+" code"+(reported.length === 1 ? "" : "s")+" reported on, "+confident.length+" with "+CONFIDENT+" or more reports. A percentage shows once "+CONFIDENT_CODES+" codes have that many.";
   }else{
     const avg = Math.round(confident.map(rate).reduce((a,b)=>a+b,0)/confident.length);
-    el.textContent = avg+"%"; lab.textContent = "Working";
+    countTo(el, avg, "%"); lab.textContent = "Working";
     lab.title = "Across "+confident.length+" codes with "+CONFIDENT+" or more reports each";
   }
-  document.getElementById("s-people").textContent = new Set(codes.map(c=>c.by).filter(Boolean)).size;
+  countTo(document.getElementById("s-people"), new Set(codes.map(c=>c.by).filter(Boolean)).size);
   const sc = document.getElementById("story-count"), ss = document.getElementById("story-stores");
   if(sc) sc.textContent = live.length;
   if(ss) ss.textContent = new Set(live.map(c=>c.store)).size;
@@ -569,9 +624,11 @@ function renderDirectory(codes){
   grid.innerHTML = "";
   if(shown.length === 0){ grid.innerHTML = `<div class="empty" style="grid-column:1/-1">Nothing in this category yet.</div>`; return; }
   const DPAGE = 12;
-  (dirOpen ? shown : shown.slice(0, DPAGE)).forEach((s,i)=>{
+  const dvis = dirOpen ? shown : shown.slice(0, DPAGE);
+  const dsig = dvis.map(x=>x.name).join("\n"), dstill = dsig === lastDirSig; lastDirSig = dsig;
+  dvis.forEach((s,i)=>{
     const el = document.createElement("button");
-    el.type = "button"; el.className = "dircard";
+    el.type = "button"; el.className = "dircard"+(dstill ? " still" : "");
     el.style.animationDelay = Math.min(i*0.03,.4)+"s";
     el.innerHTML = `<img src="${favicon(s.name)}" alt=""><span class="dirname">${esc(s.name)}</span><span class="dircat">${esc(CATS[s.cat]||s.cat)}</span>
       <span class="dirstats"><b>${s.live}</b> live ${s.best ? `<span class="dirbest">up to ${s.best}%</span>` : ""}</span>`;
@@ -824,11 +881,18 @@ function loadTheme(){
 document.getElementById("themetoggle").addEventListener("click", ()=>{
   const dark = document.body.classList.toggle("dark");
   store.set(THEME_KEY, dark ? "dark" : "light");
+  const tb = document.getElementById("themetoggle"); tb.classList.remove("pop"); void tb.offsetWidth; tb.classList.add("pop");
 });
 
 /* the top bar goes light once the hero has scrolled past, in light mode */
 const bar = document.getElementById("bar");
-function barLook(){ bar.classList.toggle("light", window.scrollY > 300); }
+function barLook(){
+  bar.classList.toggle("light", window.scrollY > 300);
+  // back at the top, in the hero, no section is the current one
+  if(window.scrollY < 220 && typeof navLinks !== "undefined" && navLinks.some(a=>a.classList.contains("on"))){
+    navLinks.forEach(a=>a.classList.remove("on")); movePill();
+  }
+}
 window.addEventListener("scroll", barLook, { passive:true });
 
 /* which section is on screen, for the bar */
@@ -837,11 +901,85 @@ if("IntersectionObserver" in window){
   const io = new IntersectionObserver(entries=>{
     entries.forEach(en=>{
       if(!en.isIntersecting) return;
+      if(window.scrollY < 220) return;
       navLinks.forEach(a=>a.classList.toggle("on", a.getAttribute("href") === "#"+en.target.id));
+      movePill();
     });
   }, { rootMargin:"-40% 0px -55% 0px" });
   ["codes","stores","why","always","get"].forEach(id=>{ const el = document.getElementById(id); if(el) io.observe(el); });
 }
+
+/* the bar's pill: one shape that glides to the section you are in. It first
+   stretches over the old link and the new one, then shrinks onto the new one. */
+const navEl = document.querySelector("#bar nav"), pill = document.createElement("span");
+pill.className = "navpill"; pill.setAttribute("aria-hidden", "true");
+navEl.prepend(pill); navEl.classList.add("glide");
+let pillT = 0;
+function movePill(){
+  const a = navEl.querySelector("a.on");
+  clearTimeout(pillT);
+  if(!a){ pill.className = "navpill"; return; }
+  const L = a.offsetLeft, W = a.offsetWidth, curL = parseFloat(pill.style.left) || 0, curW = parseFloat(pill.style.width) || 0;
+  const place = ()=>{ pill.style.left = L+"px"; pill.style.width = W+"px"; };
+  if(calm || !pill.classList.contains("show") || !curW){ pill.className = "navpill show"; place(); }
+  else{
+    const uL = Math.min(curL, L), uR = Math.max(curL + curW, L + W);
+    pill.className = "navpill show stretch"; pill.style.left = uL+"px"; pill.style.width = (uR - uL)+"px";
+    pillT = setTimeout(()=>{ pill.className = "navpill show settle"; place(); }, 130);
+  }
+  if(a.scrollIntoView && navEl.scrollWidth > navEl.clientWidth) a.scrollIntoView({ block:"nearest", inline:"nearest" });
+}
+window.addEventListener("resize", ()=>{ pill.classList.remove("stretch", "settle"); movePill(); });
+
+/* the word in the hero comes in letter by letter (the whole word stays what a screen reader says) */
+(function(){
+  const h = document.querySelector(".hero h1");
+  if(calm || !h) return;
+  const word = h.textContent;
+  h.setAttribute("aria-label", word);
+  h.innerHTML = [...word].map((ch,i)=>`<span class="ch" aria-hidden="true" style="--i:${i}">${ch === " " ? "&nbsp;" : esc(ch)}</span>`).join("");
+})();
+
+/* sections show up as you reach them: each piece of a section rises in, one
+   after the other. Nothing is hidden unless this script can also show it:
+   no IntersectionObserver, or less motion asked for, and the page is simply there. */
+(function(){
+  if(calm || !("IntersectionObserver" in window)) return;
+  const blocks = [...document.querySelectorAll("main .block")];
+  blocks.forEach(b=>[...b.children].forEach((ch,i)=>{ ch.classList.add("rv"); ch.style.setProperty("--i", Math.min(i, 5)); }));
+  document.documentElement.classList.add("motion");
+  const show = b=>{
+    const kids = [...b.children];
+    kids.forEach(ch=>ch.classList.add("in"));
+    // afterwards they are ordinary elements again (no delay left on their transitions)
+    setTimeout(()=>kids.forEach(ch=>{ ch.classList.remove("rv", "in"); ch.style.removeProperty("--i"); }), 1600);
+  };
+  let fired = false;
+  const io = new IntersectionObserver(entries=>entries.forEach(en=>{
+    fired = true;
+    if(!en.isIntersecting) return;
+    io.unobserve(en.target);
+    // what is on screen when the page opens waits for the hero to finish
+    const wait = Math.max(0, 1150 - (performance.now() - pageT0));
+    if(wait) setTimeout(()=>show(en.target), wait); else show(en.target);
+  }), { rootMargin:"0px 0px -8% 0px" });
+  blocks.forEach(b=>io.observe(b));
+  // a safety net: whatever happens, nothing stays hidden
+  window.addEventListener("load", ()=>setTimeout(()=>{ if(!fired) blocks.forEach(show); }, 4000));
+})();
+
+/* the two big buttons in the hero lean a little toward the pointer (mouse and trackpad only) */
+(function(){
+  if(calm || !(window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)").matches)) return;
+  document.querySelectorAll(".hero-ctas .btn").forEach(b=>{
+    b.addEventListener("pointermove", e=>{
+      const r = b.getBoundingClientRect(); b.classList.add("pulling");
+      b.style.setProperty("--mx", ((e.clientX - (r.left + r.width/2))*0.14).toFixed(1)+"px");
+      b.style.setProperty("--my", ((e.clientY - (r.top + r.height/2))*0.14).toFixed(1)+"px");
+    });
+    b.addEventListener("pointerleave", ()=>{ b.classList.remove("pulling"); b.style.setProperty("--mx", "0px"); b.style.setProperty("--my", "0px"); });
+  });
+})();
 
 /* falling clovers in the hero */
 (function(){
@@ -857,6 +995,9 @@ if("IntersectionObserver" in window){
 /* ---------- draw everything ---------- */
 function draw(){
   const codes = getCodes();
+  // the chip you just picked pops; a redraw for any other reason leaves the chips alone
+  const fkey = [fStore, fCat, fCountry].join("|");
+  document.body.classList.toggle("chips-fresh", lastFilterKey !== null && fkey !== lastFilterKey); lastFilterKey = fkey;
   const safe = (fn,arg)=>{ try{ fn(arg); }catch(e){ console.warn(fn.name, e); } };
   safe(renderStats, codes); safe(renderChips, codes); safe(renderCats, codes); safe(renderCountries, codes);
   safe(renderStorePage, codes); safe(renderList, codes); safe(renderDirectory, codes);

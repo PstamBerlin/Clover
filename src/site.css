@@ -136,8 +136,12 @@ body.dark #themetoggle .moon{display:block}
   border:1px solid rgba(26,46,18,.12);background:var(--butter);color:var(--butter-ink);
   transition:filter var(--speed),transform var(--speed),background var(--speed);
 }
-.btn:hover{filter:brightness(.97)}
-.btn:active{transform:scale(.99)}
+.btn{transform:translate(var(--mx,0px),var(--my,0px))}
+.btn{transition:filter var(--speed),background var(--speed),transform var(--t-bounce) var(--bounce)}
+.btn.pulling{transition:filter var(--speed),background var(--speed),transform 90ms var(--ease-out)}
+.btn:hover{filter:brightness(.97);transform:translate(var(--mx,0px),calc(var(--my,0px) - 2px))}
+/* pressed, a button gets a little wider and flatter, and springs back */
+.btn:active{transform:translate(var(--mx,0px),var(--my,0px)) scale(1.03,.94);transition-duration:70ms}
 .btn.glass{background:rgba(255,255,255,.1);color:#ECF7EE;border-color:rgba(255,255,255,.3)}
 .btn.glass:hover{background:rgba(255,255,255,.16);filter:none}
 .btn.quiet{background:var(--frost);color:var(--ink);border-color:var(--line)}
@@ -169,8 +173,11 @@ main{position:relative;z-index:1;max-width:980px;margin:0 auto;padding:44px 20px
 .panel p{margin:0 0 12px}
 .panel p:last-child{margin-bottom:0}
 .lead{font-size:1.12rem;font-weight:700;line-height:1.4;margin:0 0 10px}
-.more{display:none}
-.more.open{display:block}
+/* the rest of the introduction opens like a drawer: the row grows from nothing to its own height */
+.more{display:grid;grid-template-rows:0fr;opacity:0;visibility:hidden;
+  transition:grid-template-rows .5s var(--ease-out),opacity .35s var(--ease),visibility 0s .5s}
+.more > .morein{min-height:0;overflow:hidden}
+.more.open{grid-template-rows:1fr;opacity:1;visibility:visible;transition:grid-template-rows .5s var(--ease-out),opacity .35s var(--ease) .1s,visibility 0s}
 .readmore{border:0;background:none;padding:0;color:var(--spring-deep);font-weight:800;cursor:pointer;font-size:.86rem}
 
 /* a small piece of the mesh: the extension card and the dark boxes */
@@ -250,10 +257,11 @@ body.dark .chip.on,body.dark .chip.on:hover{
   display:flex;align-items:center;gap:14px;padding:14px 16px;margin-bottom:10px;
   background:var(--card);border:1px solid var(--line);border-radius:14px;
   box-shadow:inset 0 1px 0 var(--glass-line);
-  animation:rise .38s backwards cubic-bezier(.2,.9,.3,1.1);
-  transition:border-color var(--speed),box-shadow var(--speed);
+  animation:card-in var(--t-bounce) var(--bounce-soft) backwards;
+  transition:border-color var(--speed),box-shadow var(--speed),transform var(--t-bounce) var(--bounce);
 }
-.code:hover{border-color:var(--edge-a);box-shadow:inset 0 1px 0 var(--glass-line),0 0 0 3px rgba(74,222,128,.16)}
+.code.still{animation:none}
+.code:hover{border-color:var(--edge-a);box-shadow:inset 0 1px 0 var(--glass-line),0 0 0 3px rgba(74,222,128,.16);transform:translateY(-2px)}
 .code.dead,.code.expired{opacity:.62}
 .code.dead .code-store::after{content:" retired";font-size:.7rem;font-weight:800;color:var(--coral);text-transform:uppercase;letter-spacing:.06em;margin-left:6px}
 @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
@@ -276,7 +284,8 @@ body.dark .chip.on,body.dark .chip.on:hover{
 }
 body.dark .code-pill{background:#07160F;border-color:var(--line)}
 .code-pill:hover{transform:scale(1.04)}
-.code-pill.copied{background:var(--butter);color:var(--butter-ink)}
+.code-pill:active{transform:scale(1.06,.92)}
+.code-pill.copied{background:var(--butter);color:var(--butter-ink);animation:blob-in var(--t-bounce) var(--bounce)}
 .code-note{margin-top:3px;font-size:.92rem}
 .limits{display:inline-block;margin-top:4px;font-size:.72rem;padding:2px 8px;border-radius:6px;color:var(--amber-ink);background:var(--amber-soft);border:1px solid var(--amber-line)}
 .code-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin-top:7px;font-size:.7rem;color:var(--ink-faint)}
@@ -457,6 +466,92 @@ footer b{color:#fff;font-family:var(--display)}
   .block{margin-bottom:48px}
   .chip{min-height:38px}
 }
+/* ================= motion =================
+   One set of timings (--bounce and --bounce-soft: Clover's green is already
+   called --spring, so the easings are not). They are real spring curves where the browser
+   can draw them (linear()), a plain ease-out where it cannot. Everything
+   moves with transform and opacity only, so a phone has no extra work.
+   People who ask their device for less motion get none of it: the rule at
+   the very end of this file switches every animation and transition off,
+   and site.js never hides anything for them. */
+:root{
+  --ease:cubic-bezier(.22,.61,.36,1); --ease-out:cubic-bezier(.22,1,.36,1);
+  --bounce:cubic-bezier(.34,1.4,.64,1); --bounce-soft:cubic-bezier(.22,1,.36,1); --t-bounce:420ms;
+}
+@supports (transition-timing-function: linear(0, 1)){
+  :root{
+    --bounce:linear(0,0.094,0.302,0.539,0.752,0.914,1.02,1.076,1.094,1.089,1.07,1.048,1.027,1.011,1,0.993,0.991,0.991,0.993,0.995,0.997,0.999,1,1.001,1);
+    --bounce-soft:linear(0,0.053,0.176,0.324,0.474,0.609,0.723,0.815,0.884,0.934,0.969,0.991,1.005,1.012,1.015,1.015,1.014,1.012,1.009,1.007,1.005,1.004,1.002,1.001,1);
+    --t-bounce:560ms;
+  }
+}
+@keyframes drop-in{from{opacity:0;transform:translateY(-14px)}}
+@keyframes rise-in{from{opacity:0;transform:translateY(16px)}}
+@keyframes fade-in{from{opacity:0}}
+@keyframes blob-in{from{opacity:0;transform:scale(.72,.56)}}
+@keyframes card-in{from{opacity:0;transform:translateY(14px) scale(.985)}}
+@keyframes leaf-in{from{opacity:0;transform:scale(0) rotate(-50deg)}}
+@keyframes stem-in{from{stroke-dashoffset:40}}
+@keyframes letter-in{from{opacity:0;transform:translateY(.55em) rotate(8deg)}}
+
+/* ---- the page assembles itself: bar, the clover grows leaf by leaf, the word, the line, the buttons, the numbers ---- */
+#bar{animation:drop-in .5s var(--ease-out) backwards}
+.field{animation:fade-in 1.6s var(--ease) .2s backwards}
+.hero-mark .spin > g > path{transform-origin:50px 50px;animation:leaf-in var(--t-bounce) var(--bounce) backwards}
+.hero-mark .spin > g > path:nth-child(1){animation-delay:.12s}
+.hero-mark .spin > g > path:nth-child(2){animation-delay:.2s}
+.hero-mark .spin > g > path:nth-child(3){animation-delay:.28s}
+.hero-mark .spin > g > path:nth-child(4){animation-delay:.36s}
+.hero-mark .spin > path{stroke-dasharray:40;animation:stem-in .5s var(--ease-out) .48s backwards}
+.hero-mark .spin > circle{transform-origin:50px 50px;animation:blob-in var(--t-bounce) var(--bounce) .5s backwards}
+.hero h1 .ch{display:inline-block;animation:letter-in var(--t-bounce) var(--bounce) backwards;animation-delay:calc(.4s + var(--i,0) * 55ms)}
+.hero .tag{animation:rise-in .6s var(--ease-out) .82s backwards}
+.hero .swear{animation:blob-in var(--t-bounce) var(--bounce) .96s backwards}
+.hero-ctas .btn{animation:blob-in var(--t-bounce) var(--bounce) 1.08s backwards}
+.hero-ctas .btn + .btn{animation-delay:1.16s}
+.stats{animation:rise-in .7s var(--ease-out) 1.05s backwards}
+.stat b.tick{animation:blob-in var(--t-bounce) var(--bounce)}
+
+/* ---- sections show up as you reach them: their pieces rise in one after the other ----
+   (only with html.motion, which site.js sets when it can also bring them back in) */
+html.motion .rv{opacity:0;transform:translateY(22px)}
+html.motion .rv.in{opacity:1;transform:none;
+  transition:opacity .55s var(--ease),transform var(--t-bounce) var(--bounce-soft);transition-delay:calc(var(--i,0) * 70ms)}
+
+/* ---- the bar: one pill that glides to the section you are in, stretching on the way ---- */
+#bar nav{position:relative}
+.navpill{position:absolute;left:0;top:50%;height:32px;width:0;margin-top:-16px;border-radius:999px;pointer-events:none;opacity:0;
+  background:rgba(134,239,172,.14)}
+body:not(.dark) #bar.light .navpill{background:rgba(21,128,61,.1)}
+.navpill.show{opacity:1}
+.navpill.stretch{transition:left .17s var(--ease-out),width .17s var(--ease-out),opacity .2s}
+.navpill.settle{transition:left var(--t-bounce) var(--bounce),width var(--t-bounce) var(--bounce),opacity .2s}
+#bar nav.glide a.on,body:not(.dark) #bar.light nav.glide a.on{background:transparent}
+#bar nav a{position:relative;z-index:1}
+
+/* ---- small answers to what you do ---- */
+.chip{transition:border-color var(--speed),color var(--speed),background var(--speed),transform var(--t-bounce) var(--bounce)}
+.chip:active{transform:scale(1.05,.9);transition-duration:70ms}
+.chips-fresh .chip.on{animation:blob-in var(--t-bounce) var(--bounce)}
+.vote{position:relative;transition:border-color var(--speed),color var(--speed),background var(--speed),transform var(--t-bounce) var(--bounce)}
+.vote:active{transform:scale(1.06,.9);transition-duration:70ms}
+@keyframes vote-pop{from{transform:scale(1.22,.8)}}
+.vote.pop{animation:vote-pop var(--t-bounce) var(--bounce)}
+.score.pop{animation:blob-in var(--t-bounce) var(--bounce)}
+/* the little "+1" that floats off a vote */
+.floaty{position:absolute;left:50%;top:-4px;font-size:.72rem;font-weight:800;color:var(--spring-deep);pointer-events:none;white-space:nowrap;
+  animation:float-up .9s var(--ease-out) forwards}
+.floaty.down{color:var(--coral)}
+@keyframes float-up{from{opacity:0;transform:translate(-50%,6px) scale(.7)}25%{opacity:1}to{opacity:0;transform:translate(-50%,-26px) scale(1)}}
+#themetoggle.pop svg{animation:turn-in var(--t-bounce) var(--bounce)}
+@keyframes turn-in{from{transform:rotate(-90deg) scale(.5)}}
+.dircard{transition:border-color var(--speed),box-shadow var(--speed),transform var(--t-bounce) var(--bounce)}
+.dircard:hover{transform:translateY(-2px)}
+.dircard.still,.storecard.still{animation:none}
+.fold[open] .foldbody{animation:rise-in .45s var(--ease-out)}
+.status:not(:empty){animation:rise-in .35s var(--ease-out)}
+.nudge{animation:blob-in var(--t-bounce) var(--bounce)}
+
 @media (prefers-reduced-motion:reduce){
   *{animation:none!important;transition:none!important}
   html{scroll-behavior:auto}

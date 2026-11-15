@@ -398,5 +398,36 @@ footer{text-align:center;padding:30px 20px 40px;font-size:.84rem;color:var(--ink
   <p><a href="index.html">Clover</a> · codes people actually tested</p>
 </footer>
 
+<!-- motion: the top of the page rises in, and each section's pieces rise in as you reach them.
+     Nothing is hidden unless this script can also show it again, and people who ask their device
+     for less motion get the plain page. -->
+<style>
+@keyframes cl-rise{from{opacity:0;transform:translateY(16px)}}
+@media (prefers-reduced-motion:no-preference){
+  body > :not(main):not(script):not(style){animation:cl-rise .6s cubic-bezier(.22,1,.36,1) backwards}
+  body > :nth-child(2){animation-delay:.08s}
+  html.motion main .rv{opacity:0;transform:translateY(20px)}
+  html.motion main .rv.in{opacity:1;transform:none;
+    transition:opacity .55s cubic-bezier(.22,.61,.36,1),transform .6s cubic-bezier(.22,1,.36,1);transition-delay:calc(var(--i,0) * 60ms)}
+}
+</style>
+<script>
+(function(){
+  if(!("IntersectionObserver" in window) || (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches)) return;
+  var secs = [].slice.call(document.querySelectorAll("main > section"));
+  if(!secs.length) return;
+  secs.forEach(function(s){ [].slice.call(s.children).forEach(function(ch, i){ ch.classList.add("rv"); ch.style.setProperty("--i", Math.min(i, 6)); }); });
+  document.documentElement.classList.add("motion");
+  var fired = false;
+  function show(s){
+    var kids = [].slice.call(s.children);
+    kids.forEach(function(ch){ ch.classList.add("in"); });
+    setTimeout(function(){ kids.forEach(function(ch){ ch.classList.remove("rv", "in"); ch.style.removeProperty("--i"); }); }, 1600);
+  }
+  var io = new IntersectionObserver(function(es){ es.forEach(function(en){ fired = true; if(!en.isIntersecting) return; io.unobserve(en.target); show(en.target); }); }, { rootMargin:"0px 0px -8% 0px" });
+  secs.forEach(function(s){ io.observe(s); });
+  window.addEventListener("load", function(){ setTimeout(function(){ if(!fired) secs.forEach(show); }, 4000); });
+})();
+</script>
 </body>
 </html>
